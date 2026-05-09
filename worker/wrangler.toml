@@ -1,0 +1,23 @@
+# Cloudflare Worker — DOAJ African Journals Cache
+# Doc: https://developers.cloudflare.com/workers/
+
+name            = "doaj-african-cache"
+main            = "worker.js"
+compatibility_date = "2024-09-23"
+
+# KV namespace — run once to create:
+#   wrangler kv:namespace create DOAJ_KV
+#   wrangler kv:namespace create DOAJ_KV --preview
+# Then paste the returned IDs below.
+[[kv_namespaces]]
+binding    = "DOAJ_KV"
+id         = "REMPLACER_PAR_KV_NAMESPACE_ID"
+preview_id = "REMPLACER_PAR_KV_NAMESPACE_PREVIEW_ID"
+
+# Cron: refresh cache on the 1st and 15th of every month at 00:00 UTC
+[triggers]
+crons = ["0 0 1 * *"]
+
+# Secret for /refresh endpoint — set with:
+#   wrangler secret put REFRESH_SECRET
+# (never put the actual value here)
