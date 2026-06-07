@@ -9,8 +9,10 @@
  */
 
 const DOAJ_CSV_URL = "https://doaj.org/csv/journals";
-const CACHE_KEY = "african_journals";
-const CACHE_META_KEY = "african_journals_meta";
+const CACHE_KEY       = "african_journals";
+const CACHE_META_KEY  = "african_journals_meta";
+const WORLD_CACHE_KEY      = "world_journals";
+const WORLD_CACHE_META_KEY = "world_journals_meta";
 const KV_TTL = 30 * 24 * 3600; // 30 days safety TTL
 
 const AFRICAN_COUNTRIES = new Set([
@@ -26,6 +28,19 @@ const AFRICAN_COUNTRIES = new Set([
   "South Africa","South Sudan","Sudan","Tanzania","Togo",
   "Tunisia","Uganda","Zambia","Zimbabwe"
 ]);
+
+// Columns needed for the world endpoint (minimal set for index-new.html)
+const WORLD_COLS = [
+  "Journal title",
+  "Country of publisher",
+  "ISSN",
+  "EISSN",
+  "URL in DOAJ",
+  "Journal license",
+  "APC",
+  "APC amount",
+  "APC amount currency",
+];
 
 // Columns to keep in the output JSON (exact DOAJ CSV header names)
 const NEEDED_COLS = [
@@ -48,6 +63,8 @@ const NEEDED_COLS = [
   "URL in DOAJ",
   "Author holds copyright without restrictions",
   "APC",
+  "APC amount",
+  "APC amount currency",
 ];
 
 function canonicalCountry(s) {
@@ -147,6 +164,60 @@ function findColumn(headers, ...candidates) {
   return null;
 }
 
+/**
+ * Build world stats cache: aggregate ALL journals by country.
+ * Stored as { cachedAt, totalRows, countries: { [name]: { count, journals[] } } }
+ * where each journal has short keys: t=title, i=issn, e=eissn, u=url, l=license,
+ * a=APC (Yes/No), am=APC amount, ac=APC currency.
+ */
+async function buildWorldCache(env) {
+  const resp = await fetch(DOAJ_CSV_URL, {
+    headers: { "User-Agent": "DOAJ-World-Observatory/1.0 (https://azilan.me)" },
+  });
+  if (!resp.ok) throw new Error(`DOAJ CSV fetch failed: ${resp.status}`);
+  const csvText = await resp.text();
+
+  const { headers, rows } = parseCSVText(csvText);
+
+  const colMap = {};
+  for (const col of WORLD_COLS) {
+    const actual = findColumn(headers, col);
+    if (actual) colMap[col] = actual;
+  }
+  const countryCol = colMap["Country of publisher"];
+  if (!countryCol) throw new Error("Could not locate 'Country of publisher' column");
+
+  const countries = {};
+  for (const row of rows) {
+    const country = (row[countryCol] || "").trim();
+    if (!country) continue;
+    if (!countries[country]) countries[country] = { count: 0, journals: [] };
+    countries[country].count++;
+    countries[country].journals.push({
+      t:  row[colMap["Journal title"]]          || "",
+      i:  row[colMap["ISSN"]]                   || "",
+      e:  row[colMap["EISSN"]]                  || "",
+      u:  row[colMap["URL in DOAJ"]]            || "",
+      l:  row[colMap["Journal license"]]        || "",
+      a:  row[colMap["APC"]]                    || "",
+      am: row[colMap["APC amount"]]             || "",
+      ac: row[colMap["APC amount currency"]]    || "",
+    });
+  }
+
+  const meta = {
+    cachedAt:  new Date().toISOString(),
+    totalRows: rows.length,
+    countryCount: Object.keys(countries).length,
+  };
+
+  const payload = JSON.stringify({ ...meta, countries });
+  await env.DOAJ_KV.put(WORLD_CACHE_KEY,      payload,               { expirationTtl: KV_TTL });
+  await env.DOAJ_KV.put(WORLD_CACHE_META_KEY, JSON.stringify(meta),  { expirationTtl: KV_TTL });
+
+  return meta;
+}
+
 async function buildCache(env) {
   const resp = await fetch(DOAJ_CSV_URL, {
     headers: { "User-Agent": "DOAJ-African-Observatory/1.0 (https://azilan.me)" },
@@ -240,22 +311,50 @@ export default {
       });
     }
 
+    // /csv/world — serve world-wide pre-aggregated JSON (for index-new.html)
+    if (url.pathname === "/csv/world") {
+      let cached  = await env.DOAJ_KV.get(WORLD_CACHE_KEY);
+      let metaRaw = await env.DOAJ_KV.get(WORLD_CACHE_META_KEY);
+
+      if (!cached) {
+        // Cold start: build synchronously (first request will be slow ~30s)
+        try {
+          const meta = await buildWorldCache(env);
+          cached  = await env.DOAJ_KV.get(WORLD_CACHE_KEY);
+          metaRaw = JSON.stringify(meta);
+        } catch (e) {
+          return new Response(JSON.stringify({ error: "Cache build failed: " + e.message }), {
+            status: 503, headers: { ...CORS, "Content-Type": "application/json" }
+          });
+        }
+      }
+
+      const meta = metaRaw ? JSON.parse(metaRaw) : {};
+      return new Response(cached, {
+        headers: {
+          ...CORS,
+          "Content-Type":  "application/json; charset=utf-8",
+          "Cache-Control": "public, max-age=3600",
+          "X-Cache-Date":  meta.cachedAt || "",
+          "X-Total-Rows":  String(meta.totalRows || 0),
+        }
+      });
+    }
+
     // /csv (or /) — serve pre-filtered JSON
     if (url.pathname === "/csv" || url.pathname === "/") {
       let cached   = await env.DOAJ_KV.get(CACHE_KEY);
       let metaRaw  = await env.DOAJ_KV.get(CACHE_META_KEY);
 
-      // Cold start: no cache yet → build on first request
+      // Cold start: trigger background rebuild and return 503 immediately.
+      // The next request (after the cron/refresh runs) will serve from KV.
       if (!cached) {
-        try {
-          const meta = await buildCache(env);
-          cached  = await env.DOAJ_KV.get(CACHE_KEY);
-          metaRaw = JSON.stringify(meta);
-        } catch (e) {
-          return new Response(JSON.stringify({ error: "Cache not ready: " + e.message }), {
-            status: 503, headers: { ...CORS, "Content-Type": "application/json" }
-          });
-        }
+        ctx.waitUntil(
+          buildCache(env).catch(e => console.error("DOAJ cold-start cache build failed:", e.message))
+        );
+        return new Response(JSON.stringify({ error: "Cache warming up — please retry in a few minutes." }), {
+          status: 503, headers: { ...CORS, "Content-Type": "application/json" }
+        });
       }
 
       const meta = metaRaw ? JSON.parse(metaRaw) : {};
@@ -273,12 +372,17 @@ export default {
     return new Response("Not found", { status: 404 });
   },
 
-  // ── Cron handler (1st and 15th of every month at 00:00 UTC) ─────────────────
+  // ── Cron handler (1st of every month at 00:00 UTC) ──────────────────────────
   async scheduled(_event, env, ctx) {
     ctx.waitUntil(
-      buildCache(env)
-        .then(meta => console.log(`DOAJ cache refreshed: ${meta.count} African journals`))
-        .catch(e  => console.error("DOAJ cache refresh failed:", e.message))
+      Promise.all([
+        buildCache(env)
+          .then(meta => console.log(`DOAJ African cache refreshed: ${meta.count} journals`))
+          .catch(e  => console.error("DOAJ African cache refresh failed:", e.message)),
+        buildWorldCache(env)
+          .then(meta => console.log(`DOAJ World cache refreshed: ${meta.totalRows} journals, ${meta.countryCount} countries`))
+          .catch(e  => console.error("DOAJ World cache refresh failed:", e.message)),
+      ])
     );
   }
 };
