@@ -6019,6 +6019,22 @@ ${detail}`;
   .oa-works-title-link:hover{ color:var(--accent); text-decoration:underline; }
   .oa-pubyear-chart-wrap{ display:none; margin:0 20px 16px; padding:12px 16px 4px; border:1px solid var(--card-border); border-radius:14px; background:var(--card); flex-shrink:0; }
   .oa-pubyear-chart-title{ font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:2px; }
+  .oa-topics-wrap{ margin:0 20px 16px; flex-shrink:0; }
+  .oa-topics-btn{
+    display:inline-flex; align-items:center; gap:7px; padding:9px 16px;
+    border:1.5px solid var(--card-border); border-radius:12px;
+    background:var(--card-solid); color:var(--text); font-size:13px; font-weight:700;
+    font-family:inherit; cursor:pointer;
+    transition:border-color .18s ease, color .18s ease, background .18s ease;
+  }
+  .oa-topics-btn:hover:not(:disabled){ border-color:var(--accent); color:var(--accent); }
+  .oa-topics-btn:disabled{ opacity:.6; cursor:default; }
+  .oa-topics-btn .material-symbols-outlined{ font-size:17px; }
+  .oa-topics-result{
+    margin-top:10px; padding:14px 16px; border:1px solid var(--card-border); border-radius:14px;
+    background:var(--card); font-size:13px; line-height:1.7; color:var(--text); white-space:pre-line;
+  }
+  .oa-topics-result.error{ color:var(--muted); font-style:italic; }
 
   .oa-works-body{ margin:0 20px 20px; padding:4px 16px; border:1px solid var(--card-border); border-radius:14px; background:var(--card); overflow-y:auto; flex:1; }
   .oa-work-item{ display:flex; align-items:flex-start; gap:14px; padding:14px 0; border-bottom:1px solid var(--card-border); }
@@ -6078,6 +6094,13 @@ ${detail}`;
     <div id="oa-pubyear-chart-wrap" class="oa-pubyear-chart-wrap">
       <div class="oa-pubyear-chart-title">Publications par an</div>
       <div id="oa-pubyear-chart" style="height:150px;"></div>
+    </div>
+    <div id="oa-topics-wrap" class="oa-topics-wrap">
+      <button id="oa-topics-btn" type="button" class="oa-topics-btn">
+        <span class="material-symbols-outlined">auto_awesome</span>
+        Générer les sujets principaux
+      </button>
+      <div id="oa-topics-result" class="oa-topics-result" style="display:none;"></div>
     </div>
     <div class="oa-works-body" id="oa-works-body"></div>
   </div>
