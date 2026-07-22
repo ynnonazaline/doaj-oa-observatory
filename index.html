@@ -6019,6 +6019,10 @@ ${detail}`;
   .oa-source-row{ line-height:1.9; }
   .oa-source-row strong{ font-weight:700; margin-right:5px; }
   .oa-source-divider{ height:1px; background:var(--card-border); margin:6px 0; }
+  .oa-works-title-link{ color:inherit; text-decoration:none; }
+  .oa-works-title-link:hover{ color:var(--accent); text-decoration:underline; }
+  .oa-pubyear-chart-wrap{ display:none; margin:0 20px 16px; padding:12px 16px 4px; border:1px solid var(--card-border); border-radius:14px; background:var(--card); flex-shrink:0; }
+  .oa-pubyear-chart-title{ font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:2px; }
 
   .oa-works-body{ margin:0 20px 20px; padding:4px 16px; border:1px solid var(--card-border); border-radius:14px; background:var(--card); overflow-y:auto; flex:1; }
   .oa-work-item{ display:flex; align-items:center; gap:14px; padding:14px 0; border-bottom:1px solid var(--card-border); }
@@ -6051,6 +6055,10 @@ ${detail}`;
       <button class="oa-works-close" id="oa-works-close" title="Fermer" aria-label="Fermer">&#x2715;</button>
     </div>
     <div class="oa-source-card" id="oa-source-card"></div>
+    <div id="oa-pubyear-chart-wrap" class="oa-pubyear-chart-wrap">
+      <div class="oa-pubyear-chart-title">Publications par an</div>
+      <div id="oa-pubyear-chart" style="height:150px;"></div>
+    </div>
     <div class="oa-works-body" id="oa-works-body"></div>
   </div>
 </div>
@@ -6191,13 +6199,32 @@ ${detail}`;
     var sourceCard = document.getElementById('oa-source-card');
     if(!sourceCard) return;
     var issnList = (oaData.issn && oaData.issn.length) ? oaData.issn.join(', ') : (oaData.issn_l || '—');
-    sourceCard.innerHTML =
-      '<div class="oa-source-row"><strong>ISSN :</strong>' + esc(issnList) + '</div>'
-      + '<div class="oa-source-row"><strong>Type de source :</strong>' + esc(oaData.type || '—') + '</div>'
-      + '<div class="oa-source-row"><strong>Éditeur :</strong>' + esc(oaData.host_organization_name || '—') + '</div>'
-      + '<div class="oa-source-divider"></div>'
-      + '<div class="oa-source-row"><strong>Accès ouvert :</strong>' + (oaData.is_oa ? 'Oui' : 'Non') + '</div>'
-      + '<div class="oa-source-row"><strong>Dans le DOAJ :</strong>' + (oaData.is_in_doaj ? 'Oui' : 'Non') + '</div>';
+    sourceCard.innerHTML = '<div class="oa-source-row"><strong>ISSN :</strong>' + esc(issnList) + '</div>';
+    renderPubYearChart(oaData.counts_by_year);
+  }
+
+  function renderPubYearChart(countsByYear){
+    var wrap = document.getElementById('oa-pubyear-chart-wrap');
+    if(!wrap) return;
+    var data = (countsByYear || [])
+      .filter(function(c){ return c && c.year; })
+      .sort(function(a,b){ return a.year - b.year; });
+    if(!data.length){ wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    var chart = ecInit('oa-pubyear-chart');
+    if(!chart) return;
+    var dark = isDark(), sepia = isSepia();
+    var textColor   = dark ? 'rgba(245,247,251,.82)' : sepia ? '#2c1a0a' : '#1e293b';
+    var mutedColor  = dark ? 'rgba(245,247,251,.42)' : sepia ? '#7c4a1e' : '#64748b';
+    var accentColor = dark ? '#93c5fd' : sepia ? '#b45309' : '#2563eb';
+    chart.setOption({
+      grid: { left: 36, right: 12, top: 14, bottom: 24 },
+      xAxis: { type:'category', data: data.map(function(c){ return c.year; }), axisLine:{lineStyle:{color:mutedColor}}, axisLabel:{color:mutedColor, fontSize:11} },
+      yAxis: { type:'value', axisLine:{show:false}, splitLine:{lineStyle:{color:'rgba(148,163,184,.14)'}}, axisLabel:{color:mutedColor, fontSize:11} },
+      series: [{ type:'line', data: data.map(function(c){ return c.works_count; }), smooth:true, symbolSize:5, lineStyle:{color:accentColor,width:2.5}, itemStyle:{color:accentColor}, areaStyle:{color:accentColor, opacity:.12} }],
+      tooltip: { trigger:'axis', valueFormatter:function(v){ return v + ' publication' + (v===1?'':'s'); } },
+      textStyle: { color: textColor }
+    });
   }
 
   function loadSourceCard(sourceId, myToken){
@@ -6217,6 +6244,7 @@ ${detail}`;
     var body = document.getElementById('oa-works-body');
     var titleEl = document.getElementById('oa-works-title');
     var sourceCard = document.getElementById('oa-source-card');
+    var pubyearWrap = document.getElementById('oa-pubyear-chart-wrap');
     if(!modal || !body || !oaData) return;
 
     state.token += 1;
@@ -6226,7 +6254,12 @@ ${detail}`;
     state.loading = false;
     state.done = false;
 
-    titleEl.textContent = state.journalTitle || 'Articles indexés';
+    if(pubyearWrap) pubyearWrap.style.display = 'none';
+
+    var displayTitle = esc(state.journalTitle || 'Articles indexés');
+    titleEl.innerHTML = oaData.id
+      ? '<a href="' + esc(oaData.id) + '" target="_blank" rel="noopener" class="oa-works-title-link">' + displayTitle + '</a>'
+      : displayTitle;
 
     if(oaData.issn || oaData.type || oaData.host_organization_name !== undefined){
       renderSourceCard(oaData); // objet déjà complet (résolution directe, hors cache d'enrichissement)
