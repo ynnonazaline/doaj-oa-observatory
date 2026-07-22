@@ -424,7 +424,7 @@ export default {
       if (combined.length > 8000) combined = combined.slice(0, 8000);
 
       try {
-        const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+        const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fp8", {
           messages: [
             {
               role: "system",
