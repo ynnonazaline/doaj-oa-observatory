@@ -11,12 +11,11 @@ compatibility_date = "2024-09-23"
 # Then paste the returned IDs below.
 [[kv_namespaces]]
 binding    = "DOAJ_KV"
-id         = "REMPLACER_PAR_KV_NAMESPACE_ID"
-preview_id = "REMPLACER_PAR_KV_NAMESPACE_PREVIEW_ID"
+id         = "e5d9b1495a6a431b8dd40f58789bc4e4"
+preview_id = "b911aabc9f76452ead2f1338608949f6"
 
-# Cron: refresh cache on the 1st and 15th of every month at 00:00 UTC
-[triggers]
-crons = ["0 0 1 * *"]
+# Cron: set via Cloudflare dashboard (Workers > doaj-african-cache > Settings > Triggers)
+# Schedule: 0 0 * * 0  (every Sunday at midnight UTC)
 
 # Secret for /refresh endpoint — set with:
 #   wrangler secret put REFRESH_SECRET
