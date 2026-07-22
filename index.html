@@ -6109,6 +6109,34 @@ ${detail}`;
       || null;
   }
 
+  function bestHtmlUrl(work, pdfUrl){
+    var landing = (work.best_oa_location && work.best_oa_location.landing_page_url)
+      || (work.primary_location && work.primary_location.landing_page_url)
+      || null;
+    return (landing && landing !== pdfUrl) ? landing : null;
+  }
+
+  function invertedIndexToText(idx){
+    if(!idx) return '';
+    var maxPos = -1;
+    Object.keys(idx).forEach(function(word){
+      idx[word].forEach(function(pos){ if(pos > maxPos) maxPos = pos; });
+    });
+    if(maxPos < 0) return '';
+    var words = new Array(maxPos + 1);
+    Object.keys(idx).forEach(function(word){
+      idx[word].forEach(function(pos){ words[pos] = word; });
+    });
+    return words.filter(Boolean).join(' ');
+  }
+
+  var LANG_NAMES = (typeof Intl !== 'undefined' && Intl.DisplayNames) ? new Intl.DisplayNames(['fr'], {type:'language'}) : null;
+  function languageLabel(code){
+    if(!code) return '';
+    try { return (LANG_NAMES && LANG_NAMES.of(code)) || code.toUpperCase(); }
+    catch(e){ return code.toUpperCase(); }
+  }
+
   function esc(value){
     return typeof safeEscape === 'function' ? safeEscape(value) : String(value == null ? '' : value);
   }
@@ -6140,21 +6168,63 @@ ${detail}`;
 
     var meta = document.createElement('div');
     meta.className = 'oa-work-meta';
-    var cited = work.cited_by_count || 0;
-    meta.innerHTML = (work.publication_year || '?') + ' · ' + authorsHtml(work)
-      + ' · <span class="oa-work-journal">' + esc(state.journalTitle || '') + '</span>'
-      + ' · <span class="oa-work-cited"><span class="material-symbols-outlined">format_quote</span>' + cited + '</span>';
+    var metaParts = [(work.publication_year || '?'), authorsHtml(work), '<span class="oa-work-journal">' + esc(state.journalTitle || '') + '</span>'];
+    var langLabel = languageLabel(work.language);
+    if(langLabel) metaParts.push(esc(langLabel));
+    meta.innerHTML = metaParts.join(' · ');
     main.appendChild(meta);
 
+    var subfield = work.primary_topic && work.primary_topic.subfield && work.primary_topic.subfield.display_name;
+    if(subfield){
+      var badge = document.createElement('span');
+      badge.className = 'oa-work-subfield';
+      badge.textContent = subfield;
+      main.appendChild(badge);
+    }
+
+    var abstractText = invertedIndexToText(work.abstract_inverted_index);
+    if(abstractText){
+      var toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'oa-work-abstract-toggle';
+      toggle.innerHTML = '<span class="material-symbols-outlined">expand_more</span>Résumé';
+      var abstractBox = document.createElement('div');
+      abstractBox.className = 'oa-work-abstract';
+      abstractBox.textContent = abstractText;
+      toggle.addEventListener('click', function(){
+        var open = abstractBox.classList.toggle('expanded');
+        toggle.classList.toggle('expanded', open);
+      });
+      main.appendChild(toggle);
+      main.appendChild(abstractBox);
+    }
+
     item.appendChild(main);
+
+    var actions = document.createElement('div');
+    actions.className = 'oa-work-actions';
 
     var pdfUrl = bestPdfUrl(work);
     var pdf = document.createElement(pdfUrl ? 'a' : 'span');
     pdf.className = 'oa-work-pdf-btn' + (pdfUrl ? '' : ' disabled');
     if(pdfUrl){ pdf.href = pdfUrl; pdf.target = '_blank'; pdf.rel = 'noopener'; pdf.title = 'Télécharger le PDF'; }
     else { pdf.title = 'PDF non disponible'; }
-    pdf.textContent = 'PDF';
-    item.appendChild(pdf);
+    pdf.innerHTML = '<span class="material-symbols-outlined">picture_as_pdf</span>PDF';
+    actions.appendChild(pdf);
+
+    var htmlUrl = bestHtmlUrl(work, pdfUrl);
+    if(htmlUrl){
+      var htmlLink = document.createElement('a');
+      htmlLink.className = 'oa-work-html-btn';
+      htmlLink.href = htmlUrl;
+      htmlLink.target = '_blank';
+      htmlLink.rel = 'noopener';
+      htmlLink.title = 'Voir en HTML';
+      htmlLink.innerHTML = '<span class="material-symbols-outlined">description</span>HTML';
+      actions.appendChild(htmlLink);
+    }
+
+    item.appendChild(actions);
 
     return item;
   }
