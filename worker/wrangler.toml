@@ -20,3 +20,8 @@ preview_id = "b911aabc9f76452ead2f1338608949f6"
 # Secret for /refresh endpoint — set with:
 #   wrangler secret put REFRESH_SECRET
 # (never put the actual value here)
+
+# Workers AI binding — no API key needed, tied to this Cloudflare account.
+# Used by the /topics endpoint to generate journal research-topic summaries.
+[ai]
+binding = "AI"
