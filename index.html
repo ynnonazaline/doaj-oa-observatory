@@ -6378,9 +6378,9 @@ ${detail}`;
           body: JSON.stringify({ abstracts: abstracts })
         }).then(function(r){ return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
           .then(function(json){
-            if(myToken !== state.token) return;
             if(!json || !json.topics) return Promise.reject(new Error('empty'));
             setTopicsCache(sourceId, json.topics);
+            if(myToken !== state.token) return;
             showTopicsResult(json.topics, false);
             btn.disabled = false;
             btn.innerHTML = '<span class="material-symbols-outlined">auto_awesome</span>Régénérer';
