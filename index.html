@@ -142,6 +142,10 @@
     #viz-map:fullscreen,
     #viz-map:-webkit-full-screen,
     #viz-map:-moz-full-screen { height: 100vh !important; width: 100vw !important; border-radius: 0 !important; }
+    #viz-indexation-graph-wrap { position: relative; }
+    #viz-indexation-graph:fullscreen,
+    #viz-indexation-graph:-webkit-full-screen,
+    #viz-indexation-graph:-moz-full-screen { height: 100vh !important; width: 100vw !important; border-radius: 0 !important; background: var(--bg); }
     .map-action-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-top: 8px; }
     
     #active-filter-bar { display: none; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 12px; background: rgba(37,99,235,.10); border: 1px solid rgba(37,99,235,.25); margin-bottom: 10px; }
@@ -1330,7 +1334,12 @@ body{position:relative;z-index:1;background:transparent !important}
       <div class="card" style="grid-column:1 / -1;">
         <div class="section-title"><span class="section-icon" style="color:#a855f7;background:rgba(168,85,247,.13)"><span class="material-symbols-outlined">hub</span></span>Réseau d'indexation des revues</div>
         <div class="subtle" style="margin-bottom:8px;">Chaque nœud est une revue, reliée aux bases de données où elle est indexée. Taille ∝ nombre de bases. <strong>Cliquer sur une base</strong> pour activer le filtre correspondant. Faites glisser pour explorer.</div>
-        <div id="viz-indexation-graph" style="height:640px;border-radius:14px;overflow:hidden;"></div>
+        <div id="viz-indexation-graph-wrap" style="position: relative;">
+          <div id="viz-indexation-graph" style="height:640px;border-radius:14px;overflow:hidden;"></div>
+          <button id="btn-indexation-fullscreen" class="btn btn-outline" title="Plein écran" style="position: absolute; top: 10px; right: 10px; z-index: 1000; background: var(--card); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);">
+            <span class="material-symbols-outlined" style="font-size:16px;line-height:1;">fullscreen</span> Plein écran
+          </button>
+        </div>
       </div>
 
     </div>
@@ -3116,6 +3125,26 @@ function buildDisciplineKeywordDropdown(rows){
     if (btn){
       const isFs = !!document.fullscreenElement;
       btn.innerHTML = isFs
+        ? '<span class="material-symbols-outlined" style="font-size:16px;line-height:1;">fullscreen_exit</span> Quitter plein écran'
+        : '<span class="material-symbols-outlined" style="font-size:16px;line-height:1;">fullscreen</span> Plein écran';
+    }
+  });
+
+  document.getElementById("btn-indexation-fullscreen").onclick = ()=>{
+    const graphEl = document.getElementById("viz-indexation-graph");
+    if (!document.fullscreenElement){
+      graphEl.requestFullscreen && graphEl.requestFullscreen().catch(()=>{});
+    } else {
+      document.exitFullscreen && document.exitFullscreen();
+    }
+  };
+  document.addEventListener('fullscreenchange', ()=>{
+    setTimeout(()=>{ window.dispatchEvent(new Event('resize')); }, 120);
+    const graphEl = document.getElementById("viz-indexation-graph");
+    const btn = document.getElementById("btn-indexation-fullscreen");
+    if (btn){
+      const isGraphFs = document.fullscreenElement === graphEl;
+      btn.innerHTML = isGraphFs
         ? '<span class="material-symbols-outlined" style="font-size:16px;line-height:1;">fullscreen_exit</span> Quitter plein écran'
         : '<span class="material-symbols-outlined" style="font-size:16px;line-height:1;">fullscreen</span> Plein écran';
     }
