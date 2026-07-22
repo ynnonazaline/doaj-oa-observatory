@@ -6339,7 +6339,7 @@ ${detail}`;
     result.textContent = '';
     result.className = 'oa-topics-result';
 
-    var cached = getTopicsCache()[state.sourceId];
+    var cached = state.sourceId ? getTopicsCache()[state.sourceId] : null;
     if(cached){
       showTopicsResult(cached, false);
       btn.innerHTML = '<span class="material-symbols-outlined">auto_awesome</span>Régénérer';
