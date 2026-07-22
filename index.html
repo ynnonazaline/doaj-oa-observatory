@@ -6111,7 +6111,20 @@ ${detail}`;
   'use strict';
 
   var PER_PAGE = 25;
+  var TOPICS_URL = 'https://doaj-african-cache.ynnonazaline.workers.dev/topics';
   var state = { sourceId: null, journalTitle: '', page: 1, loading: false, done: false, token: 0 };
+
+  function getTopicsCache(){
+    try { return JSON.parse(sessionStorage.getItem('oa-topics-cache') || '{}'); }
+    catch(e){ return {}; }
+  }
+  function setTopicsCache(sourceId, text){
+    try {
+      var cache = getTopicsCache();
+      cache[sourceId] = text;
+      sessionStorage.setItem('oa-topics-cache', JSON.stringify(cache));
+    } catch(e){}
+  }
 
   function extractSourceId(oaId){
     if(!oaId) return '';
@@ -6308,6 +6321,79 @@ ${detail}`;
     if(modal) modal.style.display = 'none';
   }
 
+  function showTopicsResult(text, isError){
+    var result = document.getElementById('oa-topics-result');
+    if(!result) return;
+    result.textContent = text;
+    result.className = 'oa-topics-result' + (isError ? ' error' : '');
+    result.style.display = 'block';
+  }
+
+  function resetTopicsUI(){
+    var btn = document.getElementById('oa-topics-btn');
+    var result = document.getElementById('oa-topics-result');
+    if(!btn || !result) return;
+    btn.disabled = false;
+    btn.innerHTML = '<span class="material-symbols-outlined">auto_awesome</span>Générer les sujets principaux';
+    result.style.display = 'none';
+    result.textContent = '';
+    result.className = 'oa-topics-result';
+
+    var cached = getTopicsCache()[state.sourceId];
+    if(cached){
+      showTopicsResult(cached, false);
+      btn.innerHTML = '<span class="material-symbols-outlined">auto_awesome</span>Régénérer';
+    }
+  }
+
+  function generateTopics(){
+    var btn = document.getElementById('oa-topics-btn');
+    if(!btn || btn.disabled) return;
+    var myToken = state.token;
+    var sourceId = state.sourceId;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="material-symbols-outlined" style="animation:bar-pulse 1s infinite alternate;">hourglass_empty</span>Analyse en cours…';
+
+    var url = 'https://api.openalex.org/works?filter=primary_location.source.id:' + encodeURIComponent(sourceId)
+      + '&sort=publication_date:desc&per-page=100&select=abstract_inverted_index';
+
+    fetch(url).then(function(r){ return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
+      .then(function(data){
+        if(myToken !== state.token) return;
+        var results = (data && data.results) || [];
+        var abstracts = results
+          .map(function(w){ return invertedIndexToText(w.abstract_inverted_index); })
+          .filter(Boolean);
+
+        if(!abstracts.length){
+          btn.disabled = false;
+          btn.innerHTML = '<span class="material-symbols-outlined">auto_awesome</span>Réessayer';
+          showTopicsResult('Résumés insuffisants pour générer une synthèse.', true);
+          return;
+        }
+
+        return fetch(TOPICS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ abstracts: abstracts })
+        }).then(function(r){ return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
+          .then(function(json){
+            if(myToken !== state.token) return;
+            if(!json || !json.topics) return Promise.reject(new Error('empty'));
+            setTopicsCache(sourceId, json.topics);
+            showTopicsResult(json.topics, false);
+            btn.disabled = false;
+            btn.innerHTML = '<span class="material-symbols-outlined">auto_awesome</span>Régénérer';
+          });
+      })
+      .catch(function(){
+        if(myToken !== state.token) return;
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-symbols-outlined">auto_awesome</span>Réessayer';
+        showTopicsResult('Impossible de générer les sujets pour le moment.', true);
+      });
+  }
+
   function renderPubYearChart(countsByYear){
     var wrap = document.getElementById('oa-pubyear-chart-wrap');
     if(!wrap) return;
@@ -6359,6 +6445,7 @@ ${detail}`;
     state.done = false;
 
     if(pubyearWrap) pubyearWrap.style.display = 'none';
+    resetTopicsUI();
 
     var displayTitle = esc(state.journalTitle || 'Articles indexés');
     titleEl.innerHTML = oaData.id
@@ -6382,6 +6469,9 @@ ${detail}`;
     loadPage();
   }
   window._oaOpenWorksModal = openWorksModal;
+
+  var topicsBtn = document.getElementById('oa-topics-btn');
+  if(topicsBtn) topicsBtn.addEventListener('click', generateTopics);
 
   document.addEventListener('click', function(e){
     if(!e.target) return;
