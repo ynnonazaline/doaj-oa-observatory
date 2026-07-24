@@ -6086,7 +6086,7 @@ ${detail}`;
     <div id="oa-topics-wrap" class="oa-topics-wrap">
       <button id="oa-topics-btn" type="button" class="oa-topics-btn">
         <span class="material-symbols-outlined">auto_awesome</span>
-        Générer les sujets principaux
+        Découvrir les sujets publiés par la revue
       </button>
       <div id="oa-topics-result" class="oa-topics-result" style="display:none;"></div>
     </div>
@@ -6322,7 +6322,7 @@ ${detail}`;
     var result = document.getElementById('oa-topics-result');
     if(!btn || !result) return;
     btn.disabled = false;
-    btn.innerHTML = '<span class="material-symbols-outlined">auto_awesome</span>Générer les sujets principaux';
+    btn.innerHTML = '<span class="material-symbols-outlined">auto_awesome</span>Découvrir les sujets publiés par la revue';
     result.style.display = 'none';
     result.textContent = '';
     result.className = 'oa-topics-result';
@@ -6363,7 +6363,7 @@ ${detail}`;
         return fetch(TOPICS_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ abstracts: abstracts })
+          body: JSON.stringify({ abstracts: abstracts, title: state.journalTitle })
         }).then(function(r){ return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
           .then(function(json){
             if(!json || !json.topics) return Promise.reject(new Error('empty'));
