@@ -6012,10 +6012,23 @@ ${detail}`;
   .oa-topics-btn:disabled{ opacity:.6; cursor:default; }
   .oa-topics-btn .material-symbols-outlined{ font-size:17px; }
   .oa-topics-result{
-    margin-top:10px; padding:14px 16px; border:1px solid var(--card-border); border-radius:14px;
-    background:var(--card); font-size:13px; line-height:1.7; color:var(--text); white-space:pre-line;
+    position:relative; margin-top:10px; padding:14px 40px 14px 16px; border:1px solid var(--card-border); border-radius:14px;
+    background:var(--card); font-size:13px; line-height:1.7; color:var(--text);
   }
-  .oa-topics-result.error{ color:var(--muted); font-style:italic; }
+  .oa-topics-result.error{ color:var(--muted); font-style:italic; padding-right:16px; }
+  .oa-topics-text{ white-space:pre-line; max-height:600px; overflow:hidden; transition:max-height .25s ease; }
+  .oa-topics-result.collapsed .oa-topics-text{
+    max-height:44px;
+    -webkit-mask-image:linear-gradient(to bottom, #000 60%, transparent 100%);
+    mask-image:linear-gradient(to bottom, #000 60%, transparent 100%);
+  }
+  .oa-topics-collapse-btn{
+    position:absolute; top:10px; right:10px; display:inline-flex; align-items:center; justify-content:center;
+    width:26px; height:26px; border-radius:8px; border:none; cursor:pointer;
+    background:var(--chip-bg); color:var(--muted); padding:0;
+  }
+  .oa-topics-collapse-btn:hover{ color:var(--text); }
+  .oa-topics-collapse-btn .material-symbols-outlined{ font-size:17px; line-height:1; }
 
   .oa-works-body{ margin:0 20px 20px; padding:4px 16px; border:1px solid var(--card-border); border-radius:14px; background:var(--card); overflow-y:auto; flex:1; }
   .oa-work-item{ display:flex; align-items:flex-start; gap:14px; padding:14px 0; border-bottom:1px solid var(--card-border); }
@@ -6312,9 +6325,32 @@ ${detail}`;
   function showTopicsResult(text, isError){
     var result = document.getElementById('oa-topics-result');
     if(!result) return;
-    result.textContent = text;
+    result.innerHTML = '';
     result.className = 'oa-topics-result' + (isError ? ' error' : '');
     result.style.display = 'block';
+
+    if(isError){
+      result.textContent = text;
+      return;
+    }
+
+    var textEl = document.createElement('div');
+    textEl.className = 'oa-topics-text';
+    textEl.textContent = text;
+
+    var toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'oa-topics-collapse-btn';
+    toggle.title = 'Réduire';
+    toggle.innerHTML = '<span class="material-symbols-outlined">expand_less</span>';
+    toggle.addEventListener('click', function(){
+      var collapsed = result.classList.toggle('collapsed');
+      toggle.title = collapsed ? 'Développer' : 'Réduire';
+      toggle.innerHTML = '<span class="material-symbols-outlined">' + (collapsed ? 'expand_more' : 'expand_less') + '</span>';
+    });
+
+    result.appendChild(toggle);
+    result.appendChild(textEl);
   }
 
   function resetTopicsUI(){
