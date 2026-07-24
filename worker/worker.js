@@ -418,6 +418,8 @@ export default {
         return new Response(JSON.stringify({ error: "no_abstracts" }), { status: 400, headers: CORS });
       }
 
+      const title = typeof body.title === "string" && body.title.trim() ? body.title.trim() : "cette revue";
+
       // Server-side caps, independent of what the frontend sends.
       const capped = abstracts.slice(0, 100);
       let combined = capped.join("\n\n---\n\n");
@@ -428,11 +430,11 @@ export default {
           messages: [
             {
               role: "system",
-              content: "Tu es un assistant qui analyse des résumés d'articles scientifiques et identifie les principaux thèmes de recherche d'une revue académique. Réponds uniquement en français, sous forme d'une liste concise de 5 à 8 thèmes (un thème par ligne, précédé d'un tiret), sans introduction ni conclusion."
+              content: "Tu es un assistant qui rédige une courte présentation éditoriale d'une revue scientifique à partir de résumés d'articles qu'elle a publiés. Rédige un texte fluide de 3 à 5 phrases, en français, qui décrit les grandes thématiques de recherche abordées par la revue en les regroupant (n'énumère jamais les articles un par un, ne cite aucun titre d'article). Commence par une phrase qui nomme la revue telle qu'elle t'est donnée. N'utilise ni tiret, ni liste à puces, ni titre : uniquement du texte continu."
             },
-            { role: "user", content: combined }
+            { role: "user", content: "Nom de la revue : " + title + "\n\nRésumés d'articles :\n" + combined }
           ],
-          max_tokens: 400
+          max_tokens: 450
         });
         const topics = result && result.response ? String(result.response).trim() : "";
         if (!topics) {
