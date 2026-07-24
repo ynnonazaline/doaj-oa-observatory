@@ -4901,6 +4901,7 @@ ${detail}`;
     text-decoration:none !important;
     cursor:pointer;
     flex:0 0 auto;
+    font-family:inherit;
     transition:background .18s ease,border-color .18s ease,color .18s ease,transform .15s ease,box-shadow .18s ease;
     white-space:nowrap;
   }
@@ -5951,12 +5952,13 @@ ${detail}`;
     var left = foot.querySelector('div');
     if (!left) return;
 
-    var a = document.createElement('a');
+    var titleEl = card.querySelector('.card-title');
+    var journalTitle = titleEl ? titleEl.textContent : '';
+
+    var a = document.createElement('button');
+    a.type = 'button';
     a.className = 'openalex-btn';
-    a.href = oaData.id;
-    a.target = '_blank';
-    a.rel = 'noopener';
-    attachTip(a, 'OpenAlex', [oaData.works_count.toLocaleString('fr-FR') + ' articles indexés']);
+    attachTip(a, 'OpenAlex', [oaData.works_count.toLocaleString('fr-FR') + ' articles indexés', 'Cliquez pour explorer les articles']);
 
     var cnt = document.createElement('span');
     cnt.className = 'openalex-count';
@@ -5969,41 +5971,16 @@ ${detail}`;
 
     a.appendChild(cnt);
     a.appendChild(img);
-    left.appendChild(a);
-
-    var titleEl = card.querySelector('.card-title');
-    var journalTitle = titleEl ? titleEl.textContent : '';
-
-    var works = document.createElement('button');
-    works.type = 'button';
-    works.className = 'openalex-works-btn';
-    works.innerHTML = '<span class="material-symbols-outlined">search</span>';
-    if (typeof attachTip === 'function') attachTip(works, 'Découvrir les articles', ['Voir les articles indexés par OpenAlex']);
-    works.addEventListener('click', function(){
+    a.addEventListener('click', function(){
       if (typeof window._oaOpenWorksModal === 'function') window._oaOpenWorksModal(oaData, journalTitle);
     });
-    left.appendChild(works);
+    left.appendChild(a);
   }
   window._oaAddButton = addOAButton;
 })();
 </script>
 
 <style id="openalex-works-css">
-  .openalex-works-btn{
-    display:inline-flex; align-items:center; justify-content:center;
-    width:34px; height:34px; border-radius:10px;
-    border:1px solid rgba(0,100,200,.28); background:rgba(0,100,200,.07); color:#005ab0;
-    cursor:pointer; flex:0 0 auto; padding:0;
-    transition:background .18s ease,border-color .18s ease,color .18s ease,transform .15s ease,box-shadow .18s ease;
-  }
-  .openalex-works-btn .material-symbols-outlined{ font-size:17px; line-height:1; }
-  .openalex-works-btn:hover{
-    background:rgba(0,100,200,.16) !important; border-color:rgba(0,100,200,.55) !important;
-    color:#003a80 !important; transform:translateY(-1px); box-shadow:0 6px 20px rgba(0,100,200,.18) !important;
-  }
-  html.dark .openalex-works-btn{ color:#70b8ff; border-color:rgba(112,184,255,.22); background:rgba(112,184,255,.08); }
-  html.dark .openalex-works-btn:hover{ background:rgba(112,184,255,.18) !important; border-color:rgba(112,184,255,.5) !important; color:#b0d8ff !important; box-shadow:0 6px 20px rgba(112,184,255,.18) !important; }
-
   #oa-works-modal{ position:fixed; inset:0; z-index:9100; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.45); backdrop-filter:blur(4px); }
   #oa-works-modal .oa-works-inner{
     background:var(--card-solid); border:1px solid var(--card-border); border-radius:18px;
