@@ -6481,7 +6481,7 @@ ${detail}`;
     var base = 'https://api.openalex.org/works?filter=primary_location.source.id:' + encodeURIComponent(sourceId);
     Promise.all([
       fetch(base + '&per-page=1').then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }),
-      fetch(base + ',open_access.oa_url:!null&per-page=1').then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; })
+      fetch(base + ',open_access.is_oa:true&per-page=1').then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; })
     ]).then(function(results){
       if(myToken !== state.token) return;
       var totalData = results[0], linkData = results[1];
