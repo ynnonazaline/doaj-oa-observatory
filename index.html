@@ -6412,7 +6412,7 @@ ${detail}`;
     var countEl = document.getElementById('oa-availability-count');
     if(!wrap) return;
     if(!total){ wrap.style.display = 'none'; return; }
-    var pct = Math.round((withLink / total) * 100);
+    var pct = Math.max(0, Math.min(100, Math.round((withLink / total) * 100)));
     wrap.style.display = 'flex';
     pctEl.textContent = pct + '% des articles disponibles en PDF ou HTML';
     countEl.textContent = withLink.toLocaleString('fr-FR') + ' sur ' + total.toLocaleString('fr-FR') + ' articles';
@@ -6449,6 +6449,7 @@ ${detail}`;
     ]).then(function(results){
       if(myToken !== state.token) return;
       var totalData = results[0], linkData = results[1];
+      if(totalData === null || linkData === null){ renderAvailabilityGauge(0, 0); return; }
       var total = totalData && totalData.meta ? totalData.meta.count : 0;
       var withLink = linkData && linkData.meta ? linkData.meta.count : 0;
       renderAvailabilityGauge(withLink, total);
