@@ -6393,9 +6393,8 @@ ${detail}`;
       .then(function(data){
         if(myToken !== state.token) return;
         var results = (data && data.results) || [];
-        var abstracts = results
-          .map(function(w){ return invertedIndexToText(w.abstract_inverted_index); })
-          .filter(Boolean);
+        var withAbstract = results.filter(function(w){ return !!invertedIndexToText(w.abstract_inverted_index); });
+        var abstracts = withAbstract.map(function(w){ return invertedIndexToText(w.abstract_inverted_index); });
 
         if(!abstracts.length){
           btn.disabled = false;
@@ -6406,7 +6405,7 @@ ${detail}`;
 
         var domainCounts = {};
         var subfieldCounts = {};
-        results.forEach(function(w){
+        withAbstract.forEach(function(w){
           var t = w.primary_topic;
           if(!t) return;
           var d = t.domain && t.domain.display_name;
