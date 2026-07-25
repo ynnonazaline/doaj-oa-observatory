@@ -419,20 +419,29 @@ export default {
       }
 
       const title = typeof body.title === "string" && body.title.trim() ? body.title.trim() : "cette revue";
+      const domain = typeof body.domain === "string" && body.domain.trim() ? body.domain.trim() : null;
+      const subfields = Array.isArray(body.subfields)
+        ? body.subfields.filter(s => typeof s === "string" && s.trim().length > 0).slice(0, 3)
+        : [];
 
       // Server-side caps, independent of what the frontend sends.
       const capped = abstracts.slice(0, 100);
       let combined = capped.join("\n\n---\n\n");
       if (combined.length > 8000) combined = combined.slice(0, 8000);
 
+      const factsLines = ["Nom de la revue : " + title];
+      if (domain) factsLines.push("Grand domaine scientifique (déjà en français) : " + domain);
+      if (subfields.length) factsLines.push("Principales sous-disciplines (en anglais, à traduire naturellement en français) : " + subfields.join(", "));
+
+      const systemPrompt = (domain || subfields.length)
+        ? "Tu es un assistant qui rédige une courte présentation éditoriale d'une revue scientifique. On te donne le nom de la revue, éventuellement son grand domaine scientifique (déjà en français) et ses principales sous-disciplines (en anglais, à traduire naturellement en français), ainsi que des résumés d'articles qu'elle a publiés. Rédige un texte en français qui commence par UNE SEULE phrase de ce format exact, en remplaçant les crochets et en traduisant les sous-disciplines en français courant : \"[Nom de la revue] est une revue en [domaine], spécialisée en [sous-discipline 1], [sous-discipline 2] et [sous-discipline 3].\" (adapte la liste à 1, 2 ou 3 éléments selon ce qui est fourni ; si aucun domaine n'est fourni, commence simplement par \"[Nom de la revue] est une revue spécialisée en [sous-disciplines].\"). Poursuis ensuite avec 2 à 4 phrases supplémentaires, en français, qui décrivent les grandes thématiques de recherche abordées par la revue à partir des résumés fournis, en les regroupant (n'énumère jamais les articles un par un, ne cite aucun titre d'article). N'utilise ni tiret, ni liste à puces, ni titre : uniquement du texte continu."
+        : "Tu es un assistant qui rédige une courte présentation éditoriale d'une revue scientifique à partir de résumés d'articles qu'elle a publiés. Rédige un texte fluide de 3 à 5 phrases, en français, qui décrit les grandes thématiques de recherche abordées par la revue en les regroupant (n'énumère jamais les articles un par un, ne cite aucun titre d'article). Commence par une phrase qui nomme la revue telle qu'elle t'est donnée. N'utilise ni tiret, ni liste à puces, ni titre : uniquement du texte continu.";
+
       try {
         const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fp8", {
           messages: [
-            {
-              role: "system",
-              content: "Tu es un assistant qui rédige une courte présentation éditoriale d'une revue scientifique à partir de résumés d'articles qu'elle a publiés. Rédige un texte fluide de 3 à 5 phrases, en français, qui décrit les grandes thématiques de recherche abordées par la revue en les regroupant (n'énumère jamais les articles un par un, ne cite aucun titre d'article). Commence par une phrase qui nomme la revue telle qu'elle t'est donnée. N'utilise ni tiret, ni liste à puces, ni titre : uniquement du texte continu."
-            },
-            { role: "user", content: "Nom de la revue : " + title + "\n\nRésumés d'articles :\n" + combined }
+            { role: "system", content: systemPrompt },
+            { role: "user", content: factsLines.join("\n") + "\n\nRésumés d'articles :\n" + combined }
           ],
           max_tokens: 450
         });

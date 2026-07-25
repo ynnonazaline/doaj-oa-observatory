@@ -6115,6 +6115,12 @@ ${detail}`;
 
   var PER_PAGE = 25;
   var TOPICS_URL = 'https://doaj-african-cache.ynnonazaline.workers.dev/topics';
+  var DOMAIN_FR = {
+    'Health Sciences': 'santé',
+    'Life Sciences': 'sciences de la vie',
+    'Physical Sciences': 'sciences physiques',
+    'Social Sciences': 'sciences humaines et sociales'
+  };
   var state = { sourceId: null, journalTitle: '', page: 1, loading: false, done: false, token: 0 };
 
   function getTopicsCache(){
@@ -6381,7 +6387,7 @@ ${detail}`;
     btn.innerHTML = '<span class="material-symbols-outlined" style="animation:bar-pulse 1s infinite alternate;">hourglass_empty</span>Analyse en cours…';
 
     var url = 'https://api.openalex.org/works?filter=primary_location.source.id:' + encodeURIComponent(sourceId)
-      + '&sort=publication_date:desc&per-page=100&select=abstract_inverted_index';
+      + '&sort=publication_date:desc&per-page=100&select=abstract_inverted_index,primary_topic';
 
     fetch(url).then(function(r){ return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
       .then(function(data){
@@ -6398,10 +6404,24 @@ ${detail}`;
           return;
         }
 
+        var domainCounts = {};
+        var subfieldCounts = {};
+        results.forEach(function(w){
+          var t = w.primary_topic;
+          if(!t) return;
+          var d = t.domain && t.domain.display_name;
+          var s = t.subfield && t.subfield.display_name;
+          if(d) domainCounts[d] = (domainCounts[d] || 0) + 1;
+          if(s) subfieldCounts[s] = (subfieldCounts[s] || 0) + 1;
+        });
+        var topDomainRaw = Object.keys(domainCounts).sort(function(a,b){ return domainCounts[b] - domainCounts[a]; })[0] || null;
+        var domainFr = topDomainRaw ? (DOMAIN_FR[topDomainRaw] || null) : null;
+        var topSubfields = Object.keys(subfieldCounts).sort(function(a,b){ return subfieldCounts[b] - subfieldCounts[a]; }).slice(0, 3);
+
         return fetch(TOPICS_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ abstracts: abstracts, title: state.journalTitle })
+          body: JSON.stringify({ abstracts: abstracts, title: state.journalTitle, domain: domainFr, subfields: topSubfields })
         }).then(function(r){ return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
           .then(function(json){
             if(!json || !json.topics) return Promise.reject(new Error('empty'));
