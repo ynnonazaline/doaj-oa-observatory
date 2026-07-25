@@ -6465,10 +6465,11 @@ ${detail}`;
         type: 'gauge',
         progress: { show:true, width:10, itemStyle:{ color: accentColor } },
         axisLine: { lineStyle:{ width:10, color:[[1, trackColor]] } },
+        pointer: { itemStyle: { color: accentColor } },
         axisTick: { show:false },
         splitLine: { length:8, lineStyle:{ width:1.5, color: mutedColor } },
         axisLabel: { distance:12, color: mutedColor, fontSize:10 },
-        anchor: { show:true, showAbove:true, size:12, itemStyle:{ borderWidth:4, color: accentColor } },
+        anchor: { show:true, showAbove:true, size:12, itemStyle:{ borderWidth:4, color: accentColor, borderColor: accentColor } },
         title: { show:false },
         detail: { valueAnimation:true, fontSize:22, fontWeight:800, color:textColor, offsetCenter:[0,'70%'], formatter:'{value}%' },
         data: [{ value: pct }]
