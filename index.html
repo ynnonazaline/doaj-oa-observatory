@@ -6112,6 +6112,8 @@ ${detail}`;
   .oa-info-sublist{ margin:0; padding-left:18px; }
 
   .oa-openalex-absent-note{ margin:0 20px 20px; padding:14px 16px; color:var(--muted); font-size:13px; font-style:italic; }
+
+  .oa-openalex-section{ display:flex; flex-direction:column; flex:1; min-height:0; }
 </style>
 
 <div id="oa-works-modal">
@@ -6120,25 +6122,31 @@ ${detail}`;
       <div class="oa-works-head-title" id="oa-works-title"></div>
       <button class="oa-works-close" id="oa-works-close" title="Fermer" aria-label="Fermer">&#x2715;</button>
     </div>
-    <div class="oa-charts-row">
-      <div id="oa-availability-wrap" class="oa-availability-wrap">
-        <div class="oa-availability-title">Disponibilité des textes</div>
-        <div id="oa-availability-gauge"></div>
-        <div id="oa-availability-count" class="oa-availability-count"></div>
+    <div id="oa-journal-info" class="oa-journal-info"></div>
+    <div id="oa-openalex-section" class="oa-openalex-section" style="display:none;">
+      <div class="oa-charts-row">
+        <div id="oa-availability-wrap" class="oa-availability-wrap">
+          <div class="oa-availability-title">Disponibilité des textes</div>
+          <div id="oa-availability-gauge"></div>
+          <div id="oa-availability-count" class="oa-availability-count"></div>
+        </div>
+        <div id="oa-pubyear-chart-wrap" class="oa-pubyear-chart-wrap">
+          <div class="oa-pubyear-chart-title">Publications par an</div>
+          <div id="oa-pubyear-chart" style="height:150px;"></div>
+        </div>
       </div>
-      <div id="oa-pubyear-chart-wrap" class="oa-pubyear-chart-wrap">
-        <div class="oa-pubyear-chart-title">Publications par an</div>
-        <div id="oa-pubyear-chart" style="height:150px;"></div>
+      <div id="oa-topics-wrap" class="oa-topics-wrap">
+        <button id="oa-topics-btn" type="button" class="oa-topics-btn">
+          <span class="material-symbols-outlined">auto_awesome</span>
+          Découvrir les sujets publiés par la revue
+        </button>
+        <div id="oa-topics-result" class="oa-topics-result" style="display:none;"></div>
       </div>
+      <div class="oa-works-body" id="oa-works-body"></div>
     </div>
-    <div id="oa-topics-wrap" class="oa-topics-wrap">
-      <button id="oa-topics-btn" type="button" class="oa-topics-btn">
-        <span class="material-symbols-outlined">auto_awesome</span>
-        Découvrir les sujets publiés par la revue
-      </button>
-      <div id="oa-topics-result" class="oa-topics-result" style="display:none;"></div>
+    <div id="oa-openalex-absent-note" class="oa-openalex-absent-note" style="display:none;">
+      Cette revue n'est pas (encore) indexée par OpenAlex.
     </div>
-    <div class="oa-works-body" id="oa-works-body"></div>
   </div>
 </div>
 
