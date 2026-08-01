@@ -1688,6 +1688,8 @@ body{position:relative;z-index:1;background:transparent !important}
     url: "Journal URL",
     langs: "Languages in which the journal accepts manuscripts",
     license: "Journal license",
+    licenseAttributes: "License attributes",
+    licenseTermsUrl: "URL for license terms",
     country: "Country of publisher",
     countryOtherOrg: "Country of other organisation",
     weeks: "Average number of weeks between article submission and publication",
@@ -1697,16 +1699,19 @@ body{position:relative;z-index:1;background:transparent !important}
     opensince: "When did the journal start to publish all content using an open license?",
     addedon: "Added on Date",
     reviewprocess: "Review process",
+    reviewProcessUrl: "Review process information URL",
     mostRecent: "Most Recent Article Added",
     numArticles: "Number of Article Records",
     doajUrl: "URL in DOAJ",
     authorCopyright: "Author holds copyright without restrictions",
     apc: "APC",
+    apcInfoUrl: "APC information URL",
     apcAmount: "APC amount",
     apcCurrency: "APC amount currency",
     preservation: "Preservation Services",
     preservationNL: "Preservation Service: national library",
-    persistentIds: "Persistent article identifiers"
+    persistentIds: "Persistent article identifiers",
+    publisher: "Publisher"
   };
 
   const COUNTRY_ISO2 = {
@@ -1791,13 +1796,17 @@ body{position:relative;z-index:1;background:transparent !important}
   }
   function remapIfNeeded(headers){
     const lc = headers.map(h=>h.toLowerCase());
+    const claimed = new Set();
+    for (const k of Object.keys(COLS)){
+      if (headers.includes(COLS[k])) claimed.add(COLS[k]);
+    }
     function pick(...poss){
       for (const p of poss){
         const i = lc.indexOf(p.toLowerCase());
         if (i !== -1) return headers[i];
       }
       for (const p of poss){
-        const hit = headers.find(h=>h.toLowerCase().includes(p.toLowerCase()));
+        const hit = headers.find(h=>!claimed.has(h) && h.toLowerCase().includes(p.toLowerCase()));
         if (hit) return hit;
       }
       return null;
@@ -1815,7 +1824,7 @@ body{position:relative;z-index:1;background:transparent !important}
           ...(k==="apcAmount" ? ["APC amount","APC Amount","apc amount"] : []),
           ...(k==="apcCurrency" ? ["APC amount currency","APC currency","APC Amount Currency"] : [])
         );
-        if (alt) COLS[k] = alt;
+        if (alt) { COLS[k] = alt; claimed.add(alt); }
       }
     }
   }
