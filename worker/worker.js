@@ -54,6 +54,8 @@ const NEEDED_COLS = [
   "Journal URL",
   "Languages in which the journal accepts manuscripts",
   "Journal license",
+  "License attributes",
+  "URL for license terms",
   "Country of publisher",
   "Country of other organisation",
   "Average number of weeks between article submission and publication",
@@ -63,15 +65,18 @@ const NEEDED_COLS = [
   "When did the journal start to publish all content using an open license?",
   "Added on Date",
   "Review process",
+  "Review process information URL",
   "Most Recent Article Added",
   "URL in DOAJ",
   "Author holds copyright without restrictions",
   "APC",
+  "APC information URL",
   "APC amount",
   "APC amount currency",
   "Preservation Services",
   "Preservation Service: national library",
   "Persistent article identifiers",
+  "Publisher",
 ];
 
 function canonicalCountry(s) {
