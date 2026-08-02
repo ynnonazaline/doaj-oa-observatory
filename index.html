@@ -6595,7 +6595,9 @@ ${detail}`;
 
   function issnFromPath(pathname){
     var m = /^\/openaccess\/([^/]+)\/?$/.exec(pathname);
-    return m ? decodeURIComponent(m[1]) : null;
+    if(!m) return null;
+    try { return decodeURIComponent(m[1]); }
+    catch(e){ return null; }
   }
 
   function yesNoBadge(isYes){
