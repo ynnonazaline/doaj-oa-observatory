@@ -5391,6 +5391,7 @@ ${detail}`;
     if(s.length===8) return s.slice(0,4)+'-'+s.slice(4);
     return String(v||'').trim().toUpperCase();
   }
+  window.normIssnStr = normIssnStr;
 
   function fetchCrossrefCount(rawIssn){
     const issn = normIssnStr(rawIssn);
@@ -6577,17 +6578,17 @@ ${detail}`;
   }
 
   function findRowByIssn(id){
-    var norm = normIssnStr(id);
+    var norm = window.normIssnStr(id);
     if(!norm || typeof RAW === 'undefined' || !Array.isArray(RAW)) return null;
     for(var i=0;i<RAW.length;i++){
       var row = RAW[i];
-      if(normIssnStr(row[COLS.issn]) === norm || normIssnStr(row[COLS.eissn]) === norm) return row;
+      if(window.normIssnStr(row[COLS.issn]) === norm || window.normIssnStr(row[COLS.eissn]) === norm) return row;
     }
     return null;
   }
 
   function primaryIdForRow(row){
-    return normIssnStr(row[COLS.eissn]) || normIssnStr(row[COLS.issn]) || null;
+    return window.normIssnStr(row[COLS.eissn]) || window.normIssnStr(row[COLS.issn]) || null;
   }
 
   function issnFromPath(pathname){
