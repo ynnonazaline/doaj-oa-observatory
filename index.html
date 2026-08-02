@@ -5115,6 +5115,8 @@ ${detail}`;
     frag.appendChild(wrap);
     return frag;
   }
+  window.keywordListFromRow = keywordListFromRow;
+  window.makeKeywordChips = makeKeywordChips;
 
   function filterByKeyword(row, value){
     const wanted = String(value || '').trim().toLowerCase();
@@ -6661,8 +6663,8 @@ ${detail}`;
 
     addInfoRow(container, 'Statut Diamant', yesNoBadge(typeof isApcNoRow === 'function' && isApcNoRow(row)));
 
-    if(typeof keywordListFromRow === 'function' && keywordListFromRow(row).length && typeof makeKeywordChips === 'function'){
-      addInfoRow(container, 'Mots-clés', makeKeywordChips(row));
+    if(typeof window.keywordListFromRow === 'function' && window.keywordListFromRow(row).length && typeof window.makeKeywordChips === 'function'){
+      addInfoRow(container, 'Mots-clés', window.makeKeywordChips(row));
     }
 
     var subjects = (row[COLS.subjects] || '').split('|').map(function(s){ return s.trim(); }).filter(Boolean);
