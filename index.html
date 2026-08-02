@@ -6766,6 +6766,57 @@ ${detail}`;
   }
   window._oaOpenWorksModal = openWorksModal;
 
+  var pageToken = 0;
+
+  function openJournalPage(row){
+    var myToken = ++pageToken;
+    var modal = document.getElementById('oa-works-modal');
+    var titleEl = document.getElementById('oa-works-title');
+    var oaSection = document.getElementById('oa-openalex-section');
+    var absentNote = document.getElementById('oa-openalex-absent-note');
+
+    var title = row[COLS.title] || 'Revue sans titre';
+    var doajUrl = row[COLS.doajUrl];
+    titleEl.innerHTML = doajUrl
+      ? '<a href="' + esc(doajUrl) + '" target="_blank" rel="noopener" class="oa-works-title-link">' + esc(title) + '</a>'
+      : esc(title);
+
+    renderJournalInfo(row);
+
+    oaSection.style.display = 'none';
+    absentNote.style.display = 'none';
+
+    modal.style.display = 'flex';
+    document.title = title + ' · ' + SITE_TITLE;
+
+    var eissn = row[COLS.eissn], issn = row[COLS.issn];
+    if((eissn || issn) && typeof window._oaFetch === 'function'){
+      window._oaFetch(eissn, issn).then(function(oaData){
+        if(myToken !== pageToken || modal.style.display === 'none') return;
+        if(oaData && oaData.works_count){
+          oaSection.style.display = '';
+          openWorksModal(oaData, title);
+        } else {
+          absentNote.style.display = 'block';
+        }
+      });
+    } else {
+      absentNote.style.display = 'block';
+    }
+  }
+  window._openJournalPage = openJournalPage;
+
+  function openJournalPageNotFound(id){
+    var modal = document.getElementById('oa-works-modal');
+    document.getElementById('oa-works-title').textContent = 'Revue introuvable';
+    document.getElementById('oa-journal-info').innerHTML =
+      '<div class="oa-works-state">Aucune revue ne correspond à l\'identifiant ' + esc(id) + ' dans le catalogue.</div>';
+    document.getElementById('oa-openalex-section').style.display = 'none';
+    document.getElementById('oa-openalex-absent-note').style.display = 'none';
+    modal.style.display = 'flex';
+  }
+  window._openJournalPageNotFound = openJournalPageNotFound;
+
   var topicsBtn = document.getElementById('oa-topics-btn');
   if(topicsBtn) topicsBtn.addEventListener('click', generateTopics);
 
