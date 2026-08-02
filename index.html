@@ -6231,7 +6231,7 @@ ${detail}`;
   }
 
   function esc(value){
-    return typeof safeEscape === 'function' ? safeEscape(value) : String(value == null ? '' : value);
+    return typeof escapeHTML === 'function' ? escapeHTML(value) : String(value == null ? '' : value);
   }
 
   function authorsHtml(work){
