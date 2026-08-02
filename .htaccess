@@ -1,0 +1,9 @@
+# --- Pages de revue OpenAccess (routage SPA côté client) ---
+# À FUSIONNER dans le .htaccess existant du serveur (ne pas remplacer :
+# ce dépôt local n'a pas de copie du .htaccess actuellement en ligne).
+# Placer ce bloc APRÈS les éventuelles autres RewriteRule existantes,
+# pour que ce repli SPA ne capture que ce qu'aucune autre règle n'a déjà traité.
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^openaccess/ /index.html [L]
