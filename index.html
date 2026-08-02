@@ -5727,7 +5727,7 @@ ${detail}`;
             card.dataset.inOpenalex = 'no';
           } else {
             card.dataset.inOpenalex = 'yes';
-            if(typeof window._oaAddButton === 'function') window._oaAddButton(card, oaData);
+            if(typeof window._oaAddButton === 'function') window._oaAddButton(card, oaData, r);
           }
         });
       } else {
@@ -5967,15 +5967,12 @@ ${detail}`;
     return String(n);
   }
 
-  function addOAButton(card, oaData) {
+  function addOAButton(card, oaData, row) {
     if (card.querySelector('.openalex-btn')) return;
     var foot = card.querySelector('.card-footer');
     if (!foot) return;
     var left = foot.querySelector('div');
     if (!left) return;
-
-    var titleEl = card.querySelector('.card-title');
-    var journalTitle = titleEl ? titleEl.textContent : '';
 
     var a = document.createElement('button');
     a.type = 'button';
@@ -5994,7 +5991,7 @@ ${detail}`;
     a.appendChild(cnt);
     a.appendChild(img);
     a.addEventListener('click', function(){
-      if (typeof window._oaOpenWorksModal === 'function') window._oaOpenWorksModal(oaData, journalTitle);
+      if (typeof window._openJournalRoute === 'function') window._openJournalRoute(row, true);
     });
     left.appendChild(a);
   }
