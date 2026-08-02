@@ -6576,6 +6576,155 @@ ${detail}`;
       .catch(function(){});
   }
 
+  function findRowByIssn(id){
+    var norm = normIssnStr(id);
+    if(!norm || typeof RAW === 'undefined' || !Array.isArray(RAW)) return null;
+    for(var i=0;i<RAW.length;i++){
+      var row = RAW[i];
+      if(normIssnStr(row[COLS.issn]) === norm || normIssnStr(row[COLS.eissn]) === norm) return row;
+    }
+    return null;
+  }
+
+  function primaryIdForRow(row){
+    return normIssnStr(row[COLS.eissn]) || normIssnStr(row[COLS.issn]) || null;
+  }
+
+  function issnFromPath(pathname){
+    var m = /^\/openaccess\/([^/]+)\/?$/.exec(pathname);
+    return m ? decodeURIComponent(m[1]) : null;
+  }
+
+  function yesNoBadge(isYes){
+    var span = document.createElement('span');
+    span.className = 'oa-info-flag ' + (isYes ? 'oa-info-flag-yes' : 'oa-info-flag-no');
+    span.textContent = isYes ? 'Oui' : 'Non';
+    return span;
+  }
+
+  function addInfoRow(container, label, valueNode){
+    if(valueNode == null) return;
+    if(typeof valueNode === 'string' && !valueNode.trim()) return;
+    var row = document.createElement('div');
+    row.className = 'oa-info-row';
+    var lbl = document.createElement('span');
+    lbl.className = 'oa-info-label';
+    lbl.textContent = label;
+    var val = document.createElement('span');
+    val.className = 'oa-info-value';
+    if(typeof valueNode === 'string') val.textContent = valueNode;
+    else val.appendChild(valueNode);
+    row.appendChild(lbl); row.appendChild(val);
+    container.appendChild(row);
+  }
+
+  function externalLink(url, label){
+    var a = document.createElement('a');
+    a.href = url; a.target = '_blank'; a.rel = 'noopener';
+    a.textContent = label || 'En savoir plus';
+    return a;
+  }
+
+  function estimateArticlesPerYear(row){
+    var n = parseInt(row[COLS.numArticles], 10);
+    if(!n || n <= 0) return null;
+    var startYear = parseInt(row[COLS.opensince], 10);
+    if(!startYear){
+      var d = row[COLS.addedon] && typeof parseFlexibleDate === 'function' ? parseFlexibleDate(row[COLS.addedon]) : null;
+      startYear = d ? d.getFullYear() : null;
+    }
+    if(!startYear) return null;
+    var years = Math.max(1, new Date().getFullYear() - startYear);
+    return Math.round(n / years);
+  }
+
+  function renderJournalInfo(row){
+    var container = document.getElementById('oa-journal-info');
+    container.innerHTML = '';
+
+    var country = row[COLS.country];
+    if(country){
+      var cVal = document.createElement('span');
+      cVal.innerHTML = (typeof countryFlagHtml === 'function' ? countryFlagHtml(country) : '') + esc(country);
+      addInfoRow(container, 'Pays', cVal);
+    }
+
+    addInfoRow(container, 'Éditeur', row[COLS.publisher]);
+
+    var langs = typeof splitMulti === 'function' ? splitMulti(row[COLS.langs]) : [];
+    if(langs.length) addInfoRow(container, 'Langues', langs.join(', '));
+
+    var licenseParts = [row[COLS.license], row[COLS.licenseAttributes]].filter(Boolean);
+    if(licenseParts.length) addInfoRow(container, 'Licence', licenseParts.join(' — '));
+    if(row[COLS.licenseTermsUrl]) addInfoRow(container, 'Texte de la licence', externalLink(row[COLS.licenseTermsUrl]));
+
+    addInfoRow(container, 'Statut Diamant', yesNoBadge(typeof isApcNoRow === 'function' && isApcNoRow(row)));
+
+    if(typeof keywordListFromRow === 'function' && keywordListFromRow(row).length && typeof makeKeywordChips === 'function'){
+      addInfoRow(container, 'Mots-clés', makeKeywordChips(row));
+    }
+
+    var subjects = (row[COLS.subjects] || '').split('|').map(function(s){ return s.trim(); }).filter(Boolean);
+    if(subjects.length){
+      var ul = document.createElement('ul');
+      ul.className = 'oa-info-sublist';
+      subjects.forEach(function(s){ var li = document.createElement('li'); li.textContent = s; ul.appendChild(li); });
+      addInfoRow(container, 'Sujets (classification DOAJ)', ul);
+    }
+
+    if(row[COLS.reviewprocess]){
+      var revVal = document.createElement('span');
+      revVal.appendChild(document.createTextNode(row[COLS.reviewprocess]));
+      if(row[COLS.reviewProcessUrl]){
+        revVal.appendChild(document.createTextNode(' — '));
+        revVal.appendChild(externalLink(row[COLS.reviewProcessUrl]));
+      }
+      addInfoRow(container, "Processus d'évaluation", revVal);
+    }
+
+    if(row[COLS.weeks]) addInfoRow(container, 'Délai de publication', row[COLS.weeks] + ' semaines');
+
+    var apcYes = String(row[COLS.apc] || '').trim().toLowerCase() === 'yes';
+    var apcVal = document.createElement('span');
+    if(apcYes){
+      var parsed = typeof parseApcAmount === 'function' ? parseApcAmount(row) : null;
+      var eur = parsed && typeof toEur === 'function' ? toEur(parsed.amount, parsed.currency) : null;
+      var txt = 'Oui';
+      if(parsed) txt += ' — ' + parsed.amount.toLocaleString('fr-FR') + ' ' + parsed.currency + (eur ? ' (≈ ' + eur.toLocaleString('fr-FR') + ' €)' : '');
+      apcVal.appendChild(document.createTextNode(txt));
+    } else {
+      apcVal.appendChild(document.createTextNode('Non'));
+    }
+    if(row[COLS.apcInfoUrl]){
+      apcVal.appendChild(document.createTextNode(' — '));
+      apcVal.appendChild(externalLink(row[COLS.apcInfoUrl]));
+    }
+    addInfoRow(container, 'Frais de publication (APC)', apcVal);
+
+    var preservationParts = [row[COLS.preservation], row[COLS.preservationNL]].filter(Boolean);
+    if(preservationParts.length) addInfoRow(container, 'Services de préservation', preservationParts.join(' · '));
+
+    addInfoRow(container, 'Identifiant pérenne', row[COLS.persistentIds] || 'Aucun');
+
+    addInfoRow(container, 'Droit d\'auteur', yesNoBadge(String(row[COLS.authorCopyright] || '').trim().toLowerCase() === 'yes'));
+
+    if(row[COLS.opensince]) addInfoRow(container, 'Ouvert en accès libre depuis', row[COLS.opensince]);
+
+    var numArticles = row[COLS.numArticles];
+    if(numArticles){
+      var estimate = estimateArticlesPerYear(row);
+      var txt2 = Number(numArticles).toLocaleString('fr-FR') + ' articles indexés au DOAJ';
+      if(estimate) txt2 += ' (~' + estimate.toLocaleString('fr-FR') + ' articles/an, estimation)';
+      addInfoRow(container, 'Articles indexés', txt2);
+    }
+
+    var linksWrap = document.createElement('span');
+    if(row[COLS.url]) linksWrap.appendChild(externalLink(row[COLS.url], 'Site de la revue'));
+    if(row[COLS.url] && row[COLS.doajUrl]) linksWrap.appendChild(document.createTextNode(' · '));
+    if(row[COLS.doajUrl]) linksWrap.appendChild(externalLink(row[COLS.doajUrl], 'Fiche DOAJ'));
+    if(linksWrap.childNodes.length) addInfoRow(container, 'Liens', linksWrap);
+  }
+
   function openWorksModal(oaData, journalTitle){
     var modal = document.getElementById('oa-works-modal');
     var body = document.getElementById('oa-works-body');
