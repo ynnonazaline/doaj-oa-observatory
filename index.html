@@ -5518,9 +5518,22 @@ ${detail}`;
         cardHeader.appendChild(issnEl);
       }
 
-      const titleEl = document.createElement('div');
-      titleEl.className = 'card-title';
-      titleEl.style.cssText = 'padding-right:' + (isDiamond ? '44px' : '22px') + ';line-height:1.3;';
+      const primaryId = normIssnStr(eissn) || normIssnStr(issn) || null;
+      let titleEl;
+      if (primaryId) {
+        titleEl = document.createElement('a');
+        titleEl.href = '/openaccess/' + encodeURIComponent(primaryId);
+        titleEl.className = 'card-title card-title-link';
+        titleEl.addEventListener('click', function(e){
+          if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+          e.preventDefault();
+          if (typeof window._openJournalRoute === 'function') window._openJournalRoute(r, true);
+        });
+      } else {
+        titleEl = document.createElement('div');
+        titleEl.className = 'card-title';
+      }
+      titleEl.style.cssText = 'display:block;padding-right:' + (isDiamond ? '44px' : '22px') + ';line-height:1.3;';
       titleEl.textContent = title;
       cardHeader.appendChild(titleEl);
 
