@@ -6867,12 +6867,45 @@ ${detail}`;
     if(id){
       ROUTE.active = true;
       ROUTE.pushed = true;
+      closingInFlight = false;
       var row = findRowByIssn(id);
       if(row) openJournalPage(row); else openJournalPageNotFound(id);
     } else if(ROUTE.active){
       finishClose();
     }
   });
+
+  function waitForRawThenRoute(id){
+    if(!ROUTE.active || issnFromPath(location.pathname) !== id) return; // route was closed or moved to a different journal before RAW finished loading
+    if(typeof RAW !== 'undefined' && Array.isArray(RAW) && RAW.length){
+      var row = findRowByIssn(id);
+      if(row) openJournalPage(row); else openJournalPageNotFound(id);
+      return;
+    }
+    setTimeout(function(){ waitForRawThenRoute(id); }, 350);
+  }
+
+  function handleInitialRoute(){
+    var id = issnFromPath(location.pathname);
+    if(!id) return;
+    ROUTE.active = true;
+    ROUTE.pushed = false;
+    closingInFlight = false;
+
+    document.getElementById('oa-works-modal').style.display = 'flex';
+    document.getElementById('oa-works-title').textContent = 'Chargement…';
+    document.getElementById('oa-journal-info').innerHTML = '<div class="oa-works-state">Chargement de la fiche…</div>';
+    document.getElementById('oa-openalex-section').style.display = 'none';
+    document.getElementById('oa-openalex-absent-note').style.display = 'none';
+
+    waitForRawThenRoute(id);
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', handleInitialRoute);
+  } else {
+    handleInitialRoute();
+  }
 })();
 </script>
 
