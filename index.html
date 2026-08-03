@@ -6655,7 +6655,8 @@ ${detail}`;
 
     addInfoRow(container, 'Identifiant pérenne', row[COLS.persistentIds] || 'Aucun');
 
-    addInfoRow(container, 'Droit d\'auteur', yesNoBadge(String(row[COLS.authorCopyright] || '').trim().toLowerCase() === 'yes'));
+    var authorKeepsCopyright = String(row[COLS.authorCopyright] || '').trim().toLowerCase() === 'yes';
+    addInfoRow(container, 'Droit d\'auteur', authorKeepsCopyright ? "L'auteur conserve les droits d'auteur" : "L'auteur cède ses droits d'auteur à l'éditeur");
 
     if(row[COLS.opensince]) addInfoRow(container, 'Ouvert en accès libre depuis', row[COLS.opensince]);
 
