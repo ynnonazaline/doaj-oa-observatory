@@ -6571,7 +6571,10 @@ ${detail}`;
         if(myToken !== state.token || !d || !d.group_by) return;
         var groups = d.group_by
           .filter(function(g){ return g.key && g.count; })
-          .map(function(g){ return { label: languageLabel(g.key) || g.key_display_name || g.key, count: g.count }; })
+          .map(function(g){
+            var code = (g.key || '').split('/').pop();
+            return { label: languageLabel(code) || g.key_display_name || g.key, count: g.count };
+          })
           .sort(function(a,b){ return b.count - a.count; });
         var TOP = 6;
         var top = groups.slice(0, TOP);
