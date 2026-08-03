@@ -3021,6 +3021,21 @@ function buildDisciplineKeywordDropdown(rows){
 
     RAW = filtered;
 
+    if(typeof window._issnFromPath === 'function' && window._issnFromPath(location.pathname)){
+      // Page revue autonome : le catalogue (cartes, dropdowns, visualisations,
+      // enrichissement Crossref/OpenAlex par carte) est masqué et inutilisé sur
+      // cette route — on ne construit que ce dont openJournalPage a besoin (RAW,
+      // déjà en place ci-dessus).
+      _enrichmentCachePromise.then(function(enrichData){
+        if(enrichData) _applyEnrichmentCache(enrichData); // peut pré-résoudre CETTE revue sans requête supplémentaire
+        document.getElementById("csv-modal").style.display = "none";
+        clearInterval(window._loadingInterval);
+        const ov = document.getElementById("loading-overlay");
+        if(ov){ ov.classList.add("hidden"); setTimeout(()=>ov.remove(), 400); }
+      });
+      return;
+    }
+
     updateTotalCount();
     buildLangDropdown(RAW.map(r=>r[COLS.langs]));
     buildDropdownOptional("q-license", RAW.map(r=>r[COLS.license]));
@@ -6589,6 +6604,7 @@ ${detail}`;
     try { return decodeURIComponent(m[1]); }
     catch(e){ return null; }
   }
+  window._issnFromPath = issnFromPath;
 
   function yesNoBadge(isYes){
     var span = document.createElement('span');
