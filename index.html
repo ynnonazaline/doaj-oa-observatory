@@ -4908,7 +4908,7 @@ ${detail}`;
     background:rgba(0,100,200,.07);
     color:#005ab0;
     text-decoration:none !important;
-    cursor:pointer;
+    cursor:default;
     flex:0 0 auto;
     font-family:inherit;
     transition:background .18s ease,border-color .18s ease,color .18s ease,transform .15s ease,box-shadow .18s ease;
@@ -5727,7 +5727,7 @@ ${detail}`;
             card.dataset.inOpenalex = 'no';
           } else {
             card.dataset.inOpenalex = 'yes';
-            if(typeof window._oaAddButton === 'function') window._oaAddButton(card, oaData, r);
+            if(typeof window._oaAddButton === 'function') window._oaAddButton(card, oaData);
           }
         });
       } else {
@@ -5967,17 +5967,16 @@ ${detail}`;
     return String(n);
   }
 
-  function addOAButton(card, oaData, row) {
+  function addOAButton(card, oaData) {
     if (card.querySelector('.openalex-btn')) return;
     var foot = card.querySelector('.card-footer');
     if (!foot) return;
     var left = foot.querySelector('div');
     if (!left) return;
 
-    var a = document.createElement('button');
-    a.type = 'button';
+    var a = document.createElement('span');
     a.className = 'openalex-btn';
-    attachTip(a, 'OpenAlex', [oaData.works_count.toLocaleString('fr-FR') + ' articles indexés', 'Cliquez pour explorer les articles']);
+    attachTip(a, 'OpenAlex', [oaData.works_count.toLocaleString('fr-FR') + ' articles indexés']);
 
     var cnt = document.createElement('span');
     cnt.className = 'openalex-count';
@@ -5990,9 +5989,6 @@ ${detail}`;
 
     a.appendChild(cnt);
     a.appendChild(img);
-    a.addEventListener('click', function(){
-      if (typeof window._openJournalRoute === 'function') window._openJournalRoute(row, true);
-    });
     left.appendChild(a);
   }
   window._oaAddButton = addOAButton;
