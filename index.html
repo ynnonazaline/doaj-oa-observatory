@@ -5526,12 +5526,9 @@ ${detail}`;
       if (primaryId) {
         titleEl = document.createElement('a');
         titleEl.href = '/openaccess/' + encodeURIComponent(primaryId);
+        titleEl.target = '_blank';
+        titleEl.rel = 'noopener';
         titleEl.className = 'card-title card-title-link';
-        titleEl.addEventListener('click', function(e){
-          if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-          e.preventDefault();
-          if (typeof window._openJournalRoute === 'function') window._openJournalRoute(r, true);
-        });
       } else {
         titleEl = document.createElement('div');
         titleEl.className = 'card-title';
