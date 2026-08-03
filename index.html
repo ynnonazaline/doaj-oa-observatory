@@ -4221,7 +4221,9 @@ ${detail}`;
 
     fixCardDots(document);
     syncExportButtons();
-    setTimeout(()=>{ if(typeof window.ensureLeafletMap === 'function') window.ensureLeafletMap(); }, 400);
+    if(!(typeof window._issnFromPath === 'function' && window._issnFromPath(location.pathname))){
+      setTimeout(()=>{ if(typeof window.ensureLeafletMap === 'function') window.ensureLeafletMap(); }, 400);
+    }
   });
 })();
 </script>
