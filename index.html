@@ -7697,6 +7697,7 @@ html:not(.dark) .apc-eur-badge {
   }
 
   function tryInit(){
+    if(typeof window._issnFromPath === 'function' && window._issnFromPath(location.pathname)) return;
     var el = document.getElementById('viz-treemap');
     if(!el || typeof echarts==='undefined') return;
     if(typeof RAW==='undefined'||!Array.isArray(RAW)||!RAW.length){ setTimeout(tryInit,400); return; }
@@ -7867,6 +7868,7 @@ html:not(.dark) .apc-eur-badge {
   }
 
   function tryInit(){
+    if(typeof window._issnFromPath === 'function' && window._issnFromPath(location.pathname)) return;
     var el = document.getElementById('viz-apc-pct-country');
     if(!el || typeof echarts==='undefined') return;
     if(typeof RAW==='undefined'||!Array.isArray(RAW)||!RAW.length){ setTimeout(tryInit,400); return; }
