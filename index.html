@@ -6515,56 +6515,6 @@ ${detail}`;
     });
   }
 
-  function renderAvailabilityGauge(withLink, total){
-    var wrap = document.getElementById('oa-availability-wrap');
-    var countEl = document.getElementById('oa-availability-count');
-    if(!wrap) return;
-    if(!total){ wrap.style.display = 'none'; return; }
-    var pct = Math.max(0, Math.min(100, Math.round((withLink / total) * 100)));
-    wrap.style.display = 'flex';
-    countEl.textContent = withLink.toLocaleString('fr-FR') + ' sur ' + total.toLocaleString('fr-FR') + ' articles';
-
-    var chart = ecInit('oa-availability-gauge');
-    if(!chart) return;
-    var dark = isDark(), sepia = isSepia();
-    var trackColor  = dark ? 'rgba(245,247,251,.14)' : sepia ? 'rgba(180,83,9,.16)' : 'rgba(100,116,139,.14)';
-    var mutedColor  = dark ? 'rgba(245,247,251,.42)' : sepia ? '#7c4a1e' : '#64748b';
-    var accentColor = dark ? '#93c5fd' : sepia ? '#b45309' : '#2563eb';
-    var textColor   = dark ? 'rgba(245,247,251,.82)' : sepia ? '#2c1a0a' : '#1e293b';
-    chart.setOption({
-      series: [{
-        type: 'gauge',
-        progress: { show:true, width:10, itemStyle:{ color: accentColor } },
-        axisLine: { lineStyle:{ width:10, color:[[1, trackColor]] } },
-        pointer: { itemStyle: { color: accentColor } },
-        axisTick: { show:false },
-        splitLine: { length:8, lineStyle:{ width:1.5, color: mutedColor } },
-        axisLabel: { distance:12, color: mutedColor, fontSize:10 },
-        anchor: { show:true, showAbove:true, size:12, itemStyle:{ borderWidth:4, color: accentColor, borderColor: accentColor } },
-        title: { show:false },
-        detail: { valueAnimation:true, fontSize:22, fontWeight:800, color:textColor, offsetCenter:[0,'70%'], formatter:'{value}%' },
-        data: [{ value: pct }]
-      }]
-    });
-  }
-
-  function loadAvailability(sourceId, myToken){
-    var wrap = document.getElementById('oa-availability-wrap');
-    if(wrap) wrap.style.display = 'none';
-    var base = 'https://api.openalex.org/works?filter=primary_location.source.id:' + encodeURIComponent(sourceId);
-    Promise.all([
-      fetch(base + '&per-page=1').then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }),
-      fetch(base + ',open_access.is_oa:true&per-page=1').then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; })
-    ]).then(function(results){
-      if(myToken !== state.token) return;
-      var totalData = results[0], linkData = results[1];
-      if(totalData === null || linkData === null){ renderAvailabilityGauge(0, 0); return; }
-      var total = totalData && totalData.meta ? totalData.meta.count : 0;
-      var withLink = linkData && linkData.meta ? linkData.meta.count : 0;
-      renderAvailabilityGauge(withLink, total);
-    });
-  }
-
   function loadSourceCard(sourceId, myToken){
     // Les fiches pré-résolues (cache d'enrichissement) ne contiennent que {id, works_count} :
     // on va toujours chercher la fiche complète de la source pour ces informations.
@@ -6729,11 +6679,10 @@ ${detail}`;
   }
 
   function openWorksModal(oaData, journalTitle){
-    var modal = document.getElementById('oa-works-modal');
     var body = document.getElementById('oa-works-body');
     var titleEl = document.getElementById('oa-works-title');
     var pubyearWrap = document.getElementById('oa-pubyear-chart-wrap');
-    if(!modal || !body || !oaData) return;
+    if(!body || !oaData) return;
 
     state.token += 1;
     state.sourceId = extractSourceId(oaData.id);
@@ -6744,7 +6693,6 @@ ${detail}`;
 
     if(pubyearWrap) pubyearWrap.style.display = 'none';
     resetTopicsUI();
-    loadAvailability(state.sourceId, state.token);
 
     var displayTitle = esc(state.journalTitle || 'Articles indexés');
     titleEl.innerHTML = oaData.id
@@ -6764,7 +6712,6 @@ ${detail}`;
     loading.textContent = 'Chargement des articles…';
     body.appendChild(loading);
 
-    modal.style.display = 'flex';
     loadPage();
   }
   window._oaOpenWorksModal = openWorksModal;
