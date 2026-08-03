@@ -6570,7 +6570,7 @@ ${detail}`;
   function externalLink(url, label){
     var a = document.createElement('a');
     a.href = url; a.target = '_blank'; a.rel = 'noopener';
-    a.textContent = label || 'En savoir plus';
+    a.innerHTML = esc(label || 'En savoir plus') + ' <span class="material-symbols-outlined" style="font-size:13px;vertical-align:-2px;">open_in_new</span>';
     return a;
   }
 
