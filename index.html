@@ -6006,28 +6006,11 @@ ${detail}`;
 </script>
 
 <style id="openalex-works-css">
-  #oa-works-modal{ position:fixed; inset:0; z-index:9100; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.45); backdrop-filter:blur(4px); }
-  #oa-works-modal .oa-works-inner{
-    background:var(--card-solid); border:1px solid var(--card-border); border-radius:18px;
-    width:min(860px, 96vw); max-height:min(820px, 90vh); display:flex; flex-direction:column;
-    box-shadow:0 24px 64px rgba(0,0,0,.28);
-  }
-  .oa-works-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:20px 20px 14px; flex-shrink:0; }
-  .oa-works-head-title{ font-size:20px; font-weight:800; color:var(--text); line-height:1.3; }
-  .oa-works-close{ background:none; border:none; cursor:pointer; color:var(--muted); font-size:20px; line-height:1; padding:4px 8px; border-radius:8px; flex-shrink:0; }
-  .oa-works-close:hover{ color:var(--text); background:var(--chip-bg); }
-
   .oa-works-title-link{ color:inherit; text-decoration:none; }
   .oa-works-title-link:hover{ color:var(--accent); text-decoration:underline; }
-  .oa-charts-row{ display:flex; gap:12px; margin:0 20px 16px; flex-shrink:0; }
-  @media (max-width: 480px){ .oa-charts-row{ flex-direction:column; } }
-  .oa-pubyear-chart-wrap{ display:none; margin:0; padding:12px 16px 4px; border:1px solid var(--card-border); border-radius:14px; background:var(--card); flex:1 1 0; min-width:0; }
+  .oa-pubyear-chart-wrap{ display:none; margin:0; padding:12px 16px 4px; border:1px solid var(--card-border); border-radius:14px; background:var(--card); }
   .oa-pubyear-chart-title{ font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:2px; }
-  .oa-availability-wrap{ display:none; flex-direction:column; align-items:center; margin:0; padding:12px 16px; border:1px solid var(--card-border); border-radius:14px; background:var(--card); flex:1 1 0; min-width:0; }
-  .oa-availability-title{ align-self:flex-start; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:2px; }
-  #oa-availability-gauge{ width:100%; max-width:190px; height:150px; }
-  .oa-availability-count{ font-size:12.5px; color:var(--muted); margin-top:2px; }
-  .oa-topics-wrap{ margin:0 20px 16px; flex-shrink:0; }
+  .oa-topics-wrap{ margin:0 0 16px; flex-shrink:0; }
   .oa-topics-btn{
     display:inline-flex; align-items:center; gap:7px; padding:9px 16px;
     border:1.5px solid var(--card-border); border-radius:12px;
@@ -6057,7 +6040,7 @@ ${detail}`;
   .oa-topics-collapse-btn:hover{ color:var(--text); }
   .oa-topics-collapse-btn .material-symbols-outlined{ font-size:17px; line-height:1; }
 
-  .oa-works-body{ margin:0 20px 20px; padding:4px 16px; border:1px solid var(--card-border); border-radius:14px; background:var(--card); overflow-y:auto; flex:1; }
+  .oa-works-body{ margin:0 0 20px; padding:4px 16px; border:1px solid var(--card-border); border-radius:14px; background:var(--card); }
   .oa-work-item{ display:flex; align-items:flex-start; gap:14px; padding:14px 0; border-bottom:1px solid var(--card-border); }
   .oa-work-item:last-child{ border-bottom:none; }
   .oa-work-main{ flex:1; min-width:0; }
@@ -6126,8 +6109,8 @@ ${detail}`;
   .oa-info-flag-no{ color:var(--muted); background:var(--chip-bg); }
 
   .oa-journal-info{
-    margin:0 20px 16px; padding:14px 16px; border:1px solid var(--card-border); border-radius:14px;
-    background:var(--card); max-height:260px; overflow-y:auto;
+    margin:0 0 16px; padding:14px 16px; border:1px solid var(--card-border); border-radius:14px;
+    background:var(--card);
   }
   .oa-info-row{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--card-border); font-size:13px; }
   .oa-info-row:last-child{ border-bottom:none; }
@@ -6137,9 +6120,17 @@ ${detail}`;
   .oa-info-value a:hover{ text-decoration:underline; }
   .oa-info-sublist{ margin:0; padding-left:18px; }
 
-  .oa-openalex-absent-note{ margin:0 20px 20px; padding:14px 16px; color:var(--muted); font-size:13px; font-style:italic; }
+  .oa-openalex-absent-note{ margin:0 0 20px; padding:14px 16px; color:var(--muted); font-size:13px; font-style:italic; }
 
-  .oa-openalex-section{ display:flex; flex-direction:column; flex:1; min-height:0; }
+  #oa-journal-page{ background:var(--bg); min-height:60vh; }
+  .oa-journal-page-inner{ max-width:900px; margin:0 auto; padding:28px 20px 56px; }
+  .oa-back-link{
+    display:inline-flex; align-items:center; gap:6px; margin-bottom:18px;
+    color:var(--muted); text-decoration:none; font-size:13.5px; font-weight:600;
+  }
+  .oa-back-link:hover{ color:var(--accent); }
+  .oa-back-link .material-symbols-outlined{ font-size:18px; }
+  .oa-page-title{ font-size:26px; font-weight:800; color:var(--text); margin:0 0 18px; line-height:1.3; }
 </style>
 
 <div id="oa-journal-page" style="display:none;">
