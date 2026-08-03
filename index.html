@@ -6142,24 +6142,18 @@ ${detail}`;
   .oa-openalex-section{ display:flex; flex-direction:column; flex:1; min-height:0; }
 </style>
 
-<div id="oa-works-modal">
-  <div class="oa-works-inner">
-    <div class="oa-works-head">
-      <div class="oa-works-head-title" id="oa-works-title"></div>
-      <button class="oa-works-close" id="oa-works-close" title="Fermer" aria-label="Fermer">&#x2715;</button>
-    </div>
+<div id="oa-journal-page" style="display:none;">
+  <div class="container oa-journal-page-inner">
+    <a href="/" class="oa-back-link">
+      <span class="material-symbols-outlined">arrow_back</span>
+      Retour au catalogue
+    </a>
+    <h1 id="oa-works-title" class="oa-page-title"></h1>
     <div id="oa-journal-info" class="oa-journal-info"></div>
     <div id="oa-openalex-section" class="oa-openalex-section" style="display:none;">
-      <div class="oa-charts-row">
-        <div id="oa-availability-wrap" class="oa-availability-wrap">
-          <div class="oa-availability-title">Disponibilité des textes</div>
-          <div id="oa-availability-gauge"></div>
-          <div id="oa-availability-count" class="oa-availability-count"></div>
-        </div>
-        <div id="oa-pubyear-chart-wrap" class="oa-pubyear-chart-wrap">
-          <div class="oa-pubyear-chart-title">Publications par an</div>
-          <div id="oa-pubyear-chart" style="height:150px;"></div>
-        </div>
+      <div id="oa-pubyear-chart-wrap" class="oa-pubyear-chart-wrap">
+        <div class="oa-pubyear-chart-title">Publications par an</div>
+        <div id="oa-pubyear-chart" style="height:150px;"></div>
       </div>
       <div id="oa-topics-wrap" class="oa-topics-wrap">
         <button id="oa-topics-btn" type="button" class="oa-topics-btn">
