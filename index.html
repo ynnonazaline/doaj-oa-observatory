@@ -6120,8 +6120,6 @@ ${detail}`;
   .oa-info-value a:hover{ text-decoration:underline; }
   .oa-info-sublist{ margin:0; padding-left:18px; }
 
-  .oa-openalex-absent-note{ margin:0 0 20px; padding:14px 16px; color:var(--muted); font-size:13px; font-style:italic; }
-
   #oa-journal-page{ background:var(--bg); min-height:60vh; }
   .oa-journal-page-inner{ max-width:900px !important; margin:0 auto; padding:28px 20px 56px; }
   .oa-back-link{
@@ -6154,9 +6152,6 @@ ${detail}`;
         <div id="oa-topics-result" class="oa-topics-result" style="display:none;"></div>
       </div>
       <div class="oa-works-body" id="oa-works-body"></div>
-    </div>
-    <div id="oa-openalex-absent-note" class="oa-openalex-absent-note" style="display:none;">
-      Cette revue n'est pas (encore) indexée par OpenAlex.
     </div>
   </div>
 </div>
@@ -6716,7 +6711,6 @@ ${detail}`;
   function openJournalPage(row){
     var titleEl = document.getElementById('oa-works-title');
     var oaSection = document.getElementById('oa-openalex-section');
-    var absentNote = document.getElementById('oa-openalex-absent-note');
 
     var title = row[COLS.title] || 'Revue sans titre';
     var doajUrl = row[COLS.doajUrl];
@@ -6727,7 +6721,6 @@ ${detail}`;
     renderJournalInfo(row);
 
     oaSection.style.display = 'none';
-    absentNote.style.display = 'none';
 
     document.title = title + ' · ' + document.title;
 
@@ -6737,12 +6730,8 @@ ${detail}`;
         if(oaData && oaData.works_count){
           oaSection.style.display = '';
           openWorksModal(oaData, title);
-        } else {
-          absentNote.style.display = 'block';
         }
       });
-    } else {
-      absentNote.style.display = 'block';
     }
   }
   window._openJournalPage = openJournalPage;
@@ -6752,7 +6741,6 @@ ${detail}`;
     document.getElementById('oa-journal-info').innerHTML =
       '<div class="oa-works-state">Aucune revue ne correspond à l\'identifiant ' + esc(id) + ' dans le catalogue.</div>';
     document.getElementById('oa-openalex-section').style.display = 'none';
-    document.getElementById('oa-openalex-absent-note').style.display = 'none';
   }
   window._openJournalPageNotFound = openJournalPageNotFound;
 
@@ -6788,7 +6776,6 @@ ${detail}`;
     document.getElementById('oa-works-title').textContent = 'Chargement…';
     document.getElementById('oa-journal-info').innerHTML = '<div class="oa-works-state">Chargement de la fiche…</div>';
     document.getElementById('oa-openalex-section').style.display = 'none';
-    document.getElementById('oa-openalex-absent-note').style.display = 'none';
 
     waitForRawThenRoute(id);
   }
