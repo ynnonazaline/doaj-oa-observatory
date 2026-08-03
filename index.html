@@ -4051,7 +4051,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
     updateThemeButton();
     if(typeof window.refreshLeafletTheme === 'function') window.refreshLeafletTheme();
     // No card re-render needed — CSS handles theme visuals
-    if(typeof updateAllViz === 'function' && typeof RAW !== 'undefined' && RAW.length){
+    var onJournalPage = typeof window._issnFromPath === 'function' && window._issnFromPath(location.pathname);
+    if(!onJournalPage && typeof updateAllViz === 'function' && typeof RAW !== 'undefined' && RAW.length){
       setTimeout(function(){ updateAllViz(RAW); }, 0);
     }
   };
