@@ -1983,13 +1983,15 @@ function buildDisciplineKeywordDropdown(rows){
       FX_RATES = {};
       console.warn('Frankfurter fetch failed:', e);
     } finally {
-      
-      if(typeof renderAllCards === 'function' && typeof RAW !== 'undefined' && RAW.length) renderAllCards();
-      if(typeof renderCards === 'function' && typeof RECO !== 'undefined' && RECO.length) renderCards('reco-results', RECO);
-      
-      if(window._apcVizPending && typeof RAW !== 'undefined' && Array.isArray(RAW) && RAW.length){
-        window._apcVizPending = false;
-        if(typeof window.initApcViz === 'function') window.initApcViz(RAW);
+      var onJournalPage = typeof window._issnFromPath === 'function' && window._issnFromPath(location.pathname);
+      if(!onJournalPage){
+        if(typeof renderAllCards === 'function' && typeof RAW !== 'undefined' && RAW.length) renderAllCards();
+        if(typeof renderCards === 'function' && typeof RECO !== 'undefined' && RECO.length) renderCards('reco-results', RECO);
+
+        if(window._apcVizPending && typeof RAW !== 'undefined' && Array.isArray(RAW) && RAW.length){
+          window._apcVizPending = false;
+          if(typeof window.initApcViz === 'function') window.initApcViz(RAW);
+        }
       }
     }
   })();
@@ -5785,6 +5787,7 @@ ${detail}`;
   };
 
   function refreshPatchedUI(){
+    if(typeof window._issnFromPath === 'function' && window._issnFromPath(location.pathname)) return;
     try{
       if(typeof RAW !== 'undefined' && Array.isArray(RAW) && RAW.length){
         if(typeof buildDisciplineKeywordDropdown === 'function') buildDisciplineKeywordDropdown(RAW);
@@ -7347,6 +7350,7 @@ html:not(.dark) .apc-eur-badge {
 
   var _graphInitMs = 0;
   function tryInit(){
+    if(typeof window._issnFromPath === 'function' && window._issnFromPath(location.pathname)) return;
     if(typeof RAW==='undefined'||!Array.isArray(RAW)||!RAW.length){ setTimeout(tryInit,400); return; }
     if(typeof COLS==='undefined'){ setTimeout(tryInit,400); return; }
     var ajolReady = window.AJOL_MAP && window.AJOL_MAP.size > 0;
