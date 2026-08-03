@@ -6537,10 +6537,6 @@ ${detail}`;
     return null;
   }
 
-  function primaryIdForRow(row){
-    return window.normIssnStr(row[COLS.eissn]) || window.normIssnStr(row[COLS.issn]) || null;
-  }
-
   function issnFromPath(pathname){
     var m = /^\/openaccess\/([^/]+)\/?$/.exec(pathname);
     if(!m) return null;
@@ -6762,63 +6758,19 @@ ${detail}`;
   var topicsBtn = document.getElementById('oa-topics-btn');
   if(topicsBtn) topicsBtn.addEventListener('click', generateTopics);
 
-  document.addEventListener('click', function(e){
-    if(!e.target) return;
-    if(e.target.id === 'oa-works-close' || e.target.id === 'oa-works-modal') closeJournalRoute();
-  });
-  document.addEventListener('keydown', function(e){
-    if(e.key === 'Escape'){
-      var modal = document.getElementById('oa-works-modal');
-      if(modal && modal.style.display !== 'none') closeJournalRoute();
-    }
-  });
-
-  var SITE_TITLE = document.title;
-  var ROUTE = { active: false, pushed: false };
-
-  function openJournalRoute(row, pushUrl){
-    var id = primaryIdForRow(row);
-    if(!id) return;
-    if(pushUrl){
-      history.pushState({ openaccess: id }, '', '/openaccess/' + encodeURIComponent(id));
-      ROUTE.pushed = true;
-    }
-    ROUTE.active = true;
-    openJournalPage(row);
-  }
-  window._openJournalRoute = openJournalRoute;
-
-  var closingInFlight = false;
-
-  function finishClose(){
-    ROUTE.active = false;
-    ROUTE.pushed = false;
-    closingInFlight = false;
-    closeModal();
-    document.title = SITE_TITLE;
+  function showCatalogView(){
+    var main = document.querySelector('main.container');
+    if(main) main.style.display = '';
+    document.getElementById('oa-journal-page').style.display = 'none';
   }
 
-  function closeJournalRoute(){
-    if(!ROUTE.active || closingInFlight) return;
-    if(ROUTE.pushed){ closingInFlight = true; history.back(); }
-    else { history.replaceState(null, '', '/'); finishClose(); }
+  function showJournalPageView(){
+    var main = document.querySelector('main.container');
+    if(main) main.style.display = 'none';
+    document.getElementById('oa-journal-page').style.display = 'block';
   }
-
-  window.addEventListener('popstate', function(){
-    var id = issnFromPath(location.pathname);
-    if(id){
-      ROUTE.active = true;
-      ROUTE.pushed = true;
-      closingInFlight = false;
-      var row = findRowByIssn(id);
-      if(row) openJournalPage(row); else openJournalPageNotFound(id);
-    } else if(ROUTE.active){
-      finishClose();
-    }
-  });
 
   function waitForRawThenRoute(id){
-    if(!ROUTE.active || issnFromPath(location.pathname) !== id) return; // route was closed or moved to a different journal before RAW finished loading
     if(typeof RAW !== 'undefined' && Array.isArray(RAW) && RAW.length){
       var row = findRowByIssn(id);
       if(row) openJournalPage(row); else openJournalPageNotFound(id);
@@ -6829,12 +6781,9 @@ ${detail}`;
 
   function handleInitialRoute(){
     var id = issnFromPath(location.pathname);
-    if(!id) return;
-    ROUTE.active = true;
-    ROUTE.pushed = false;
-    closingInFlight = false;
+    if(!id){ showCatalogView(); return; }
 
-    document.getElementById('oa-works-modal').style.display = 'flex';
+    showJournalPageView();
     document.getElementById('oa-works-title').textContent = 'Chargement…';
     document.getElementById('oa-journal-info').innerHTML = '<div class="oa-works-state">Chargement de la fiche…</div>';
     document.getElementById('oa-openalex-section').style.display = 'none';
