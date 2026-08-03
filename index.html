@@ -6582,6 +6582,20 @@ ${detail}`;
     return Math.round(n / years);
   }
 
+  function makeAllKeywordChipsPlain(row){
+    var keywords = typeof window.keywordListFromRow === 'function' ? window.keywordListFromRow(row) : [];
+    var wrap = document.createElement('div');
+    wrap.className = 'kw-wrap';
+    keywords.forEach(function(kw){
+      var chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.style.cssText = 'font-size:11px;padding:3px 8px;';
+      chip.textContent = kw;
+      wrap.appendChild(chip);
+    });
+    return wrap;
+  }
+
   function renderJournalInfo(row){
     var container = document.getElementById('oa-journal-info');
     container.innerHTML = '';
@@ -6604,8 +6618,8 @@ ${detail}`;
 
     addInfoRow(container, 'Statut Diamant', yesNoBadge(typeof isApcNoRow === 'function' && isApcNoRow(row)));
 
-    if(typeof window.keywordListFromRow === 'function' && window.keywordListFromRow(row).length && typeof window.makeKeywordChips === 'function'){
-      addInfoRow(container, 'Mots-clés', window.makeKeywordChips(row));
+    if(typeof window.keywordListFromRow === 'function' && window.keywordListFromRow(row).length){
+      addInfoRow(container, 'Mots-clés', makeAllKeywordChipsPlain(row));
     }
 
     var subjects = (row[COLS.subjects] || '').split('|').map(function(s){ return s.trim(); }).filter(Boolean);
