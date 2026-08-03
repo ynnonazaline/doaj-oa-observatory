@@ -6518,6 +6518,49 @@ ${detail}`;
     });
   }
 
+  function renderLangChart(langGroups){
+    var wrap = document.getElementById('oa-lang-chart-wrap');
+    if(!wrap) return;
+    if(!langGroups || !langGroups.length){ wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    var chart = ecInit('oa-lang-chart');
+    if(!chart) return;
+    chart.setOption({
+      tooltip: { trigger:'item', formatter:'{b}: {c} publications ({d}%)' },
+      legend: { bottom: 2, left:'center', type:'scroll', textStyle:{ fontSize:11 }, itemGap:6 },
+      series: [{
+        type: 'pie',
+        radius: ['18%', '72%'],
+        center: ['50%', '46%'],
+        roseType: 'area',
+        itemStyle: { borderRadius: 6, borderColor: 'transparent', borderWidth: 1 },
+        label: { show: true, fontSize: 10, formatter: '{b}\n{d}%' },
+        labelLine: { length: 8, length2: 6 },
+        data: langGroups.map(function(g){ return { name: g.label, value: g.count }; })
+      }]
+    });
+  }
+
+  function loadLangDistribution(sourceId, myToken){
+    var wrap = document.getElementById('oa-lang-chart-wrap');
+    if(wrap) wrap.style.display = 'none';
+    fetch('https://api.openalex.org/works?filter=primary_location.source.id:' + encodeURIComponent(sourceId) + '&group_by=language&per-page=1')
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){
+        if(myToken !== state.token || !d || !d.group_by) return;
+        var groups = d.group_by
+          .filter(function(g){ return g.key && g.count; })
+          .map(function(g){ return { label: languageLabel(g.key) || g.key_display_name || g.key, count: g.count }; })
+          .sort(function(a,b){ return b.count - a.count; });
+        var TOP = 6;
+        var top = groups.slice(0, TOP);
+        var restCount = groups.slice(TOP).reduce(function(sum,g){ return sum + g.count; }, 0);
+        if(restCount) top.push({ label: 'Autres', count: restCount });
+        renderLangChart(top);
+      })
+      .catch(function(){});
+  }
+
   function loadSourceCard(sourceId, myToken){
     // Les fiches pré-résolues (cache d'enrichissement) ne contiennent que {id, works_count} :
     // on va toujours chercher la fiche complète de la source pour ces informations.
@@ -6706,6 +6749,8 @@ ${detail}`;
     state.done = false;
 
     if(pubyearWrap) pubyearWrap.style.display = 'none';
+    var langWrap = document.getElementById('oa-lang-chart-wrap');
+    if(langWrap) langWrap.style.display = 'none';
     resetTopicsUI();
 
     var displayTitle = esc(state.journalTitle || 'Articles indexés');
@@ -6718,6 +6763,7 @@ ${detail}`;
     } else {
       loadSourceCard(state.sourceId, state.token);
     }
+    loadLangDistribution(state.sourceId, state.token);
 
     body.innerHTML = '';
 
