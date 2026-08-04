@@ -5545,7 +5545,7 @@ ${detail}`;
       let titleEl;
       if (primaryId) {
         titleEl = document.createElement('a');
-        titleEl.href = '/openaccess/' + encodeURIComponent(primaryId);
+        titleEl.href = '/' + encodeURIComponent(primaryId);
         titleEl.target = '_blank';
         titleEl.rel = 'noopener';
         titleEl.className = 'card-title card-title-link';
@@ -5758,7 +5758,7 @@ ${detail}`;
       if (primaryId) {
         const goBtn = document.createElement('a');
         goBtn.className = 'card-go-btn';
-        goBtn.href = '/openaccess/' + encodeURIComponent(primaryId);
+        goBtn.href = '/' + encodeURIComponent(primaryId);
         goBtn.target = '_blank';
         goBtn.rel = 'noopener';
         goBtn.title = 'Voir la fiche de la revue';
@@ -6554,7 +6554,7 @@ ${detail}`;
   }
 
   function issnFromPath(pathname){
-    var m = /^\/openaccess\/([^/]+)\/?$/.exec(pathname);
+    var m = /^\/openaccess\/([^/]+)\/?$/.exec(pathname) || /^\/(\d{4}-[\dXx]{4})\/?$/i.exec(pathname);
     if(!m) return null;
     try { return decodeURIComponent(m[1]); }
     catch(e){ return null; }

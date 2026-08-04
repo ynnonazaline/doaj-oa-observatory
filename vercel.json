@@ -1,5 +1,6 @@
 {
   "rewrites": [
-    { "source": "/openaccess/(.*)", "destination": "/index.html" }
+    { "source": "/openaccess/(.*)", "destination": "/index.html" },
+    { "source": "/:issn([0-9]{4}-[0-9Xx]{4})", "destination": "/index.html" }
   ]
 }
