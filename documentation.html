@@ -1,0 +1,3153 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light" data-page="doc">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Documentation technique — Observatoire des revues africaines en libre accès</title>
+<meta name="description" content="Architecture, sources de données, visualisations et Worker Cloudflare de l'Observatoire des revues africaines en libre accès.">
+<meta name="author" content="Awuvé Innocent Azilan">
+<link rel="icon" href="https://azilan.me/favicon.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital@0;1&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   design-tokens.css — charte Azilan
+   Valeurs issues de beaver - Copie.html et indexazilan.html.
+   Voir references/design-system.md pour l'origine de chaque valeur
+   et references/sources.md pour les décisions prises.
+
+   Emploi :
+     <link rel="stylesheet" href="assets/design-tokens.css">
+   ou coller ce fichier dans un <style> pour garder une page
+   autonome en un seul fichier (c'est le cas des deux sources).
+
+   Prérequis dans le <head> :
+     <link rel="preconnect" href="https://fonts.googleapis.com">
+     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital@0;1&display=swap" rel="stylesheet">
+
+   Sommaire
+     1. Reset
+     2. Tokens — thème clair
+     3. Tokens — thème sombre
+     4. Tokens — thème sépia
+     5. Styles de base
+     6. Utilitaires d'accessibilité
+     7. Composants communs
+     8. Composants de l'archétype doc
+     9. Composants de l'archétype vitrine
+    10. Media queries
+   ============================================================ */
+
+
+/* ============================================================
+   1. Reset
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+
+/* ============================================================
+   2. Tokens — thème clair (défaut)
+   ============================================================ */
+:root {
+  /* ---------- Couleurs ---------- */
+  --color-bg:            #FFFFFF;
+  --color-bg-alt:        #F5F5F5;
+  --color-bg-card:       #FFFFFF;
+  --color-code-bg:       #FAFAFA;
+  --color-text:          #0A0A0A;
+  --color-text-muted:    #525252;
+  --color-muted-light:   #8A8A8A;
+  --color-border:        #E5E5E5;
+  --color-border-mid:    #C8C8C8;
+  --color-border-strong: #8A8A8A;
+  --color-accent-light:  rgba(0,0,0,.04);
+  --color-accent-glow:   rgba(0,0,0,.06);
+  --color-glass-bg:      rgba(255,255,255,.72);
+  --color-glass-border:  rgba(0,0,0,.11);
+  --color-spotlight:     rgba(0,0,0,.06);
+  --dock-pill:           rgba(0,0,0,.065);
+
+  /* Seule couleur chromatique de la charte : l'indicateur « en cours ».
+     Identique dans les trois thèmes. Ne pas en ajouter d'autre. */
+  --color-live:          #22c55e;
+  --color-live-halo:     rgba(34,197,94,.35);
+
+  /* Citation du vocabulaire Instagram, réservée aux bulles de stories. */
+  --ig-ring: radial-gradient(circle at 30% 107%,
+    #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);
+
+  /* ---------- Typographie ---------- */
+  --font-sans:  'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: 'Lora', Georgia, 'Times New Roman', serif;   /* italique seule */
+  --font-mono:  Consolas, 'Cascadia Mono', 'SF Mono', Menlo, 'DejaVu Sans Mono', monospace;
+
+  --text-3xs:     .5625rem;   /* 10,1px — libellés, dates, dt de métadonnées */
+  --text-2xs:     .625rem;    /* 11,3px — surtitres, en-têtes de tableau */
+  --text-xs:      .6875rem;   /* 12,4px — pastilles, liens d'action, footer */
+  --text-sm:      .75rem;     /* 13,5px — boutons, étiquettes, toast */
+  --text-base-sm: .78125rem;  /* 14,1px — sommaire, descriptions de carte */
+  --text-base:    .8125rem;   /* 14,6px — tableaux, code, résumés */
+  --text-md:      .875rem;    /* 15,8px — titres de frise, noms de compétence */
+  --text-lg:      .9375rem;   /* 16,9px — CORPS DE TEXTE */
+  --text-xl:      1rem;       /* 18,0px — lead, sous-titre de hero */
+  --text-2xl:     1.0625rem;  /* 19,1px — chapeau, titre de projet */
+  --text-3xl:     1.375rem;   /* 24,8px — titre de story */
+  --text-4xl:     1.75rem;    /* 31,5px — nom de projet */
+
+  /* ---------- Espacement ---------- */
+  --spacing-1: .25rem;
+  --spacing-2: .5rem;
+  --spacing-3: .75rem;    /* gouttière de petite grille */
+  --spacing-4: 1rem;
+  --spacing-5: 1.5rem;    /* gouttière de grande grille */
+  --spacing-6: 2rem;      /* marge latérale de section */
+  --spacing-7: 3rem;
+  --spacing-8: 5.5rem;    /* padding vertical de section vitrine */
+  --spacing-9: 4.5rem;    /* gouttières larges : sommaire, photo */
+
+  /* ---------- Mise en page ---------- */
+  --nav-h:    56px;
+  --max:      1080px;    /* conteneur vitrine */
+  --max-doc:  1180px;    /* conteneur doc */
+  --measure:  68ch;      /* mesure de la colonne de texte du doc */
+
+  /* ---------- Rayons ---------- */
+  --radius-xs:     3px;
+  --radius-sm:     4px;    /* rayon de l'archétype doc */
+  --radius:        6px;    /* rayon par défaut de la vitrine */
+  --radius-lg:    12px;    /* grandes cartes */
+  --radius-xl:    16px;    /* visionneuse */
+  --radius-pill:  999px;
+  --radius-circle: 50%;
+
+  /* ---------- Ombres (vitrine uniquement — le doc n'en a aucune) ---------- */
+  --shadow:       0 1px 3px rgba(0,0,0,.07);
+  --shadow-md:    0 4px 20px rgba(0,0,0,.09);
+  --shadow-glass: 0 2px 14px rgba(0,0,0,.06), inset 0 1px 0 rgba(255,255,255,.9);
+  --shadow-dock:  0 10px 34px rgba(0,0,0,.15), 0 2px 6px rgba(0,0,0,.07);
+
+  /* ---------- Transitions ---------- */
+  --ease:        all .22s cubic-bezier(.4, 0, .2, 1);   /* défaut, vitrine */
+  --ease-fast:   all .18s cubic-bezier(.4, 0, .2, 1);   /* doc */
+  --ease-spring: cubic-bezier(.34, 1.56, .64, 1);        /* ressort */
+  --ease-out:    cubic-bezier(.23, 1, .32, 1);           /* reveal */
+
+  /* ---------- Points de rupture (pour mémoire : CSS ne les interpole pas) ----------
+     --bp-xl 1080px · --bp-lg 1000px · --bp-md 860px · --bp-sm 640px · --bp-xs 400px
+     Le doc emploie 760px au lieu de 640px pour la bascule 18 → 16px.    */
+
+  /* ---------- Alias courts, pour compatibilité avec les pages existantes ---------- */
+  --bg: var(--color-bg);
+  --bg-alt: var(--color-bg-alt);
+  --bg-card: var(--color-bg-card);
+  --code-bg: var(--color-code-bg);
+  --text: var(--color-text);
+  --text-muted: var(--color-text-muted);
+  --text-light: var(--color-muted-light);
+  --border: var(--color-border);
+  --border-mid: var(--color-border-mid);
+  --border-strong: var(--color-border-strong);
+  --accent-light: var(--color-accent-light);
+  --accent-glow: var(--color-accent-glow);
+  --glass-bg: var(--color-glass-bg);
+  --glass-border: var(--color-glass-border);
+  --spotlight: var(--color-spotlight);
+  --font: var(--font-sans);
+  --r: var(--radius);
+  --r-lg: var(--radius-lg);
+  --sh: var(--shadow);
+  --sh-md: var(--shadow-md);
+  --sh-glass: var(--shadow-glass);
+  --sh-dock: var(--shadow-dock);
+}
+
+
+/* ============================================================
+   3. Tokens — thème sombre
+   ============================================================ */
+[data-theme="dark"] {
+  --color-bg:            #090909;
+  --color-bg-alt:        #121212;
+  --color-bg-card:       #181818;
+  --color-code-bg:       #151515;
+  --color-text:          #EEEEEE;
+  --color-text-muted:    #A0A0A0;
+  --color-muted-light:   #767676;
+  --color-border:        #282828;
+  --color-border-mid:    #3A3A3A;
+  --color-border-strong: #5A5A5A;
+  --color-accent-light:  rgba(255,255,255,.04);
+  --color-accent-glow:   rgba(255,255,255,.05);
+  --color-glass-bg:      rgba(12,12,12,.72);
+  --color-glass-border:  rgba(255,255,255,.09);
+  --color-spotlight:     rgba(255,255,255,.08);
+  --dock-pill:           rgba(255,255,255,.1);
+
+  --shadow:       0 1px 3px rgba(0,0,0,.5);
+  --shadow-md:    0 4px 24px rgba(0,0,0,.5);
+  --shadow-glass: 0 2px 14px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.05);
+  --shadow-dock:  0 10px 34px rgba(0,0,0,.6), 0 2px 6px rgba(0,0,0,.4);
+}
+
+
+/* ============================================================
+   4. Tokens — thème sépia
+   ============================================================ */
+[data-theme="sepia"] {
+  --color-bg:            #F5ECD7;
+  --color-bg-alt:        #EDE0C4;
+  --color-bg-card:       #F9F3E6;
+  --color-code-bg:       #F1E6CE;
+  --color-text:          #2C1A0E;
+  --color-text-muted:    #6B4C2A;
+  --color-muted-light:   #8B6340;
+  --color-border:        #D4BC94;
+  --color-border-mid:    #B89A6A;
+  --color-border-strong: #8B6340;
+  --color-accent-light:  rgba(44,26,14,.05);
+  --color-accent-glow:   rgba(180,100,20,.09);
+  --color-glass-bg:      rgba(249,243,230,.72);
+  --color-glass-border:  rgba(44,26,14,.12);
+  --color-spotlight:     rgba(180,100,20,.08);
+  --dock-pill:           rgba(44,26,14,.08);
+
+  --shadow:       0 1px 3px rgba(44,26,14,.1);
+  --shadow-md:    0 4px 20px rgba(44,26,14,.13);
+  --shadow-glass: 0 2px 14px rgba(44,26,14,.08), inset 0 1px 0 rgba(255,255,255,.6);
+  --shadow-dock:  0 10px 34px rgba(44,26,14,.2), 0 2px 6px rgba(44,26,14,.1);
+}
+
+
+/* ============================================================
+   5. Styles de base
+   ============================================================ */
+html { scroll-behavior: smooth; font-size: 18px; }
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background: var(--color-bg);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  transition: background .3s ease, color .3s ease;
+}
+
+/* Obligatoire sur la vitrine : laisse la place au dock flottant. */
+body.has-dock { padding-bottom: var(--spacing-8); overflow-x: hidden; }
+
+img { display: block; max-width: 100%; }
+
+/* Jamais supprimé, sur aucune page. */
+:focus-visible { outline: 2px solid var(--color-text); outline-offset: 3px; }
+
+/* ---------- Liens : déclaré UNE fois, désactivé par exception ----------
+   Les sources réécrivent cette règle sept fois. Ne pas la redupliquer. */
+a {
+  color: var(--color-text-muted);
+  text-decoration: none;
+  position: relative;
+  transition: color var(--ease);
+}
+a::after {
+  content: ''; position: absolute; bottom: -1px; left: 0;
+  width: 100%; height: 1px; background: currentColor;
+  transform: scaleX(0); transform-origin: left center;
+  transition: transform var(--ease);
+}
+a:hover { color: var(--color-text); }
+a:hover::after { transform: scaleX(1); }
+
+/* Les liens qui ne portent pas le soulignement animé. */
+.topbar__logo::after,
+.toc a::after,
+.carte::after,
+.skip-link::after,
+.action-link::after,
+.dock__item::after,
+.btn::after { display: none; }
+
+em { font-family: var(--font-serif); font-style: italic; }
+strong { font-weight: 600; color: var(--color-text); }
+p strong, li strong, dd strong, td strong { color: var(--color-text); }
+
+code {
+  font-family: var(--font-mono); font-size: .86em;
+  background: var(--color-accent-light); border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs); padding: .05em .33em;
+  color: var(--color-text); overflow-wrap: break-word;
+}
+kbd {
+  font-family: var(--font-sans); font-size: .82em; font-weight: 500;
+  border: 1px solid var(--color-border-mid); border-radius: var(--radius-xs);
+  padding: .05em .4em; color: var(--color-text); white-space: nowrap;
+}
+
+
+/* ============================================================
+   6. Utilitaires d'accessibilité
+   ============================================================ */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.skip-link {
+  position: absolute; left: -9999px; top: 0; z-index: 999;
+  background: var(--color-text); color: var(--color-bg);
+  padding: .6rem var(--spacing-4);
+  font-size: var(--text-base); font-weight: 600;
+}
+.skip-link:focus { left: 0; }
+
+
+/* ============================================================
+   7. Composants communs
+   ============================================================ */
+
+/* ---------- Topbar en verre dépoli ---------- */
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: var(--nav-h); z-index: 100;
+  background: var(--color-glass-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid var(--color-border);
+  transition: background .3s, border-color .3s;
+}
+.topbar__inner {
+  max-width: var(--max); height: 100%; margin: 0 auto;
+  padding: 0 var(--spacing-6);
+  display: flex; align-items: center; gap: var(--spacing-4);
+}
+.topbar--doc .topbar__inner { max-width: var(--max-doc); }
+.topbar__logo {
+  font-size: var(--text-lg); font-weight: 700; letter-spacing: -.03em;
+  color: var(--color-text); flex-shrink: 0;
+}
+.topbar__logo em { font-family: var(--font-sans); font-style: normal; color: var(--color-text-muted); }
+.topbar__crumb {
+  font-size: var(--text-xs); color: var(--color-muted-light);
+  letter-spacing: .03em; flex: 1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.topbar__crumb::before { content: '/'; margin-right: .55rem; color: var(--color-border-mid); }
+
+.progress {
+  position: absolute; left: 0; bottom: -1px; height: 1px; width: 0;
+  background: var(--color-border-strong); transition: width .1s linear;
+}
+
+/* ---------- Bouton icône ---------- */
+.icon-btn, .theme-btn {
+  width: 30px; height: 30px;
+  border: 1px solid var(--color-border); border-radius: var(--radius-circle);
+  background: transparent; color: var(--color-text-muted);
+  cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: var(--ease);
+}
+.icon-btn:hover, .theme-btn:hover { color: var(--color-text); border-color: var(--color-border-mid); }
+.icon-btn svg, .theme-btn svg { width: 13px; height: 13px; }
+
+/* Bascule des icônes de thème : déclarée une fois, pas neuf.
+   Chaque thème montre l'icône du thème SUIVANT dans le cycle
+   light → dark → sepia → light. */
+.icon-moon, .icon-sun, .icon-sepia { display: none; }
+[data-theme="light"] .icon-moon  { display: block; }
+[data-theme="dark"]  .icon-sepia { display: block; }
+[data-theme="sepia"] .icon-sun   { display: block; }
+
+/* ---------- Boutons ---------- */
+.btn {
+  display: inline-flex; align-items: center; gap: .375rem;
+  font-size: var(--text-sm); font-weight: 600;
+  padding: .6rem 1.125rem; border-radius: var(--radius);
+  text-decoration: none; transition: var(--ease);
+  cursor: pointer; border: none; font-family: var(--font-sans);
+}
+/* Un seul par écran. */
+.btn--primary { background: var(--color-text); color: var(--color-bg); }
+.btn--primary:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.btn--ghost {
+  background: transparent; color: var(--color-text);
+  border: 1px solid var(--color-border-mid);
+}
+.btn--ghost:hover {
+  border-color: var(--color-text); background: var(--color-accent-light);
+  transform: translateY(-1px);
+}
+.btn:disabled, .btn[aria-disabled="true"] { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.action-link {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-size: var(--text-xs); font-weight: 700; color: var(--color-text);
+  text-decoration: none; transition: gap var(--ease);
+}
+.action-link:hover { gap: .7rem; }
+
+/* ---------- Étiquettes ---------- */
+.tag {
+  display: inline-block; font-size: var(--text-sm); font-weight: 500;
+  padding: .3rem .7rem; border-radius: var(--radius-xs);
+  background: var(--color-text); color: var(--color-bg);
+}
+.tag--outline {
+  background: transparent; border: 1px solid var(--color-border);
+  color: var(--color-text-muted); font-weight: 400;
+}
+.count-badge {
+  font-size: var(--text-3xs); font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--color-muted-light);
+  background: var(--color-bg-alt); border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs); padding: .1rem .5rem;
+}
+
+/* ---------- Indicateur « en cours » : seule couleur de la charte ---------- */
+.live-status {
+  display: inline-flex; align-items: center; gap: var(--spacing-2);
+  font-size: var(--text-3xs); font-weight: 700; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--color-text-muted);
+}
+.live-status i {
+  position: relative; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--color-live); flex-shrink: 0;
+}
+.live-status i::before {
+  content: ''; position: absolute; inset: -3px; border-radius: 50%;
+  background: var(--color-live-halo);
+  animation: live-ping 1.6s cubic-bezier(0,0,.2,1) infinite;
+}
+@keyframes live-ping {
+  0%   { transform: scale(.8); opacity: 1; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+/* ---------- Tableau ---------- */
+.tw { overflow-x: auto; margin: var(--spacing-5) 0; -webkit-overflow-scrolling: touch; }
+table { border-collapse: collapse; width: 100%; font-size: var(--text-base); }
+caption {
+  text-align: left; padding-bottom: .8rem;
+  font-size: var(--text-xs); color: var(--color-muted-light); line-height: 1.6;
+}
+th, td {
+  padding: .75rem 1.1rem .75rem 0; text-align: left; vertical-align: top;
+  line-height: 1.6; border-bottom: 1px solid var(--color-border);
+}
+thead th {
+  font-size: var(--text-2xs); font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--color-muted-light);
+  border-bottom: 1px solid var(--color-border-strong); padding-bottom: .55rem;
+}
+tbody th { font-weight: 600; color: var(--color-text); font-size: var(--text-base); }
+td { color: var(--color-text-muted); }
+td.c, th.c { text-align: center; padding-right: .6rem; }
+tbody tr:last-child th,
+tbody tr:last-child td { border-bottom: 1px solid var(--color-border-strong); }
+.oui { color: var(--color-text); font-weight: 600; }
+.non { color: var(--color-muted-light); }
+
+/* ---------- Message passager ---------- */
+#toast {
+  position: fixed; left: 50%; bottom: var(--spacing-5);
+  transform: translateX(-50%) translateY(.6rem);
+  background: var(--color-text); color: var(--color-bg);
+  font-size: var(--text-sm); font-weight: 600;
+  padding: .45rem .9rem; border-radius: var(--radius-xs); z-index: 500;
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+}
+#toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+body.has-dock #toast { bottom: var(--spacing-8); }
+
+/* ---------- Formulaire (non observé dans les sources — à valider) ---------- */
+.form { max-width: var(--measure); display: flex; flex-direction: column; gap: var(--spacing-5); }
+.field { display: flex; flex-direction: column; gap: var(--spacing-1); }
+.field__label {
+  font-size: var(--text-3xs); font-weight: 600; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--color-muted-light);
+}
+.field__input {
+  font-family: var(--font-sans); font-size: var(--text-lg); line-height: 1.6;
+  color: var(--color-text); background: var(--color-bg);
+  border: 1px solid var(--color-border); border-radius: var(--radius-xs);
+  padding: .6rem .8rem; width: 100%; transition: border-color var(--ease);
+}
+.field__input::placeholder { color: var(--color-muted-light); }
+.field__input:hover { border-color: var(--color-border-mid); }
+.field__input:focus { border-color: var(--color-border-strong); }
+.field__input:disabled { opacity: .45; cursor: not-allowed; }
+.field__hint { font-size: var(--text-xs); color: var(--color-muted-light); line-height: 1.6; }
+/* Erreur sans couleur : la charte n'a pas de rouge. */
+.field--error .field__input { border-color: var(--color-text); border-left-width: 2px; }
+.field__error {
+  font-size: var(--text-xs); font-weight: 600; color: var(--color-text);
+  padding-left: 1.2rem; border-left: 1px solid var(--color-border-strong);
+}
+
+
+/* ============================================================
+   8. Composants de l'archétype doc
+   Aucune ombre, rayon 4px, mesure 68ch, titres numérotés.
+   ============================================================ */
+
+/* ---------- En-tête de document ---------- */
+.doc-head {
+  padding: calc(var(--nav-h) + 4rem) var(--spacing-6) var(--spacing-7);
+  border-bottom: 1px solid var(--color-border);
+}
+.doc-head__inner { max-width: var(--max-doc); margin: 0 auto; }
+.kicker {
+  font-size: var(--text-2xs); font-weight: 600; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--color-muted-light);
+  margin-bottom: 1.25rem;
+}
+.doc-head h1 {
+  font-size: clamp(1.9rem, 4vw, 2.8rem); font-weight: 700; letter-spacing: -.04em;
+  line-height: 1.08; max-width: 20ch; margin-bottom: 1.1rem;
+}
+.standfirst {
+  font-size: var(--text-2xl); color: var(--color-text-muted);
+  max-width: 62ch; line-height: 1.7; margin-bottom: var(--spacing-6);
+}
+.doc-meta {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--spacing-4) 2.5rem; max-width: 980px;
+  padding-top: var(--spacing-5); border-top: 1px solid var(--color-border);
+}
+.doc-meta dt {
+  font-size: var(--text-3xs); font-weight: 600; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--color-muted-light); margin-bottom: .25rem;
+}
+.doc-meta dd { font-size: var(--text-base); color: var(--color-text-muted); line-height: 1.6; }
+
+/* ---------- Disposition sommaire + texte ---------- */
+.layout {
+  max-width: var(--max-doc); margin: 0 auto; padding: 0 var(--spacing-6);
+  display: grid; grid-template-columns: 215px minmax(0, 1fr);
+  gap: var(--spacing-9); align-items: start;
+}
+.toc {
+  position: sticky; top: calc(var(--nav-h) + var(--spacing-6));
+  padding: var(--spacing-7) 0 var(--spacing-6);
+  max-height: calc(100vh - var(--nav-h) - 3.5rem);
+  overflow-y: auto; scrollbar-width: thin;
+}
+.toc__title {
+  font-size: var(--text-3xs); font-weight: 600; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--color-muted-light);
+  padding-bottom: .7rem; margin-bottom: .7rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.toc ol { list-style: none; counter-reset: toc; margin: 0; }
+.toc li { counter-increment: toc; margin: 0; }
+.toc a {
+  display: block; padding: .3rem 0 .3rem 1.6rem; position: relative;
+  font-size: var(--text-base-sm); line-height: 1.45; color: var(--color-muted-light);
+}
+.toc a::before {
+  content: counter(toc) '.'; position: absolute; left: 0; top: .3rem;
+  font-size: var(--text-xs); font-variant-numeric: tabular-nums;
+  color: var(--color-border-mid);
+}
+.toc a:hover { color: var(--color-text); }
+.toc a.active { color: var(--color-text); font-weight: 600; }
+.toc a.active::before { color: var(--color-text-muted); }
+.toc__retour {
+  margin-top: var(--spacing-5); padding-top: var(--spacing-4);
+  border-top: 1px solid var(--color-border); font-size: var(--text-base-sm);
+}
+.toc__retour a { padding-left: 0; }
+.toc__retour a::before { content: none; }
+
+/* ---------- Titres numérotés ---------- */
+.layout main { padding: var(--spacing-7) 0 4rem; min-width: 0; counter-reset: s; }
+.layout main section { padding-top: var(--spacing-5); margin-bottom: 3.5rem; }
+.layout main section[id] { scroll-margin-top: calc(var(--nav-h) + var(--spacing-5)); }
+
+.layout main h2 {
+  counter-increment: s; counter-reset: ss;
+  font-size: clamp(1.35rem, 2.2vw, 1.6rem); font-weight: 700; letter-spacing: -.035em;
+  line-height: 1.25; margin-bottom: 1.1rem; padding-bottom: .9rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.layout main h2::before { content: counter(s) '.'; }
+.layout main h3 {
+  counter-increment: ss; counter-reset: sss;
+  font-size: var(--text-lg); font-weight: 700; letter-spacing: -.015em;
+  margin: 2.25rem 0 .7rem; line-height: 1.35;
+}
+.layout main h3::before { content: counter(s) '.' counter(ss); }
+.layout main h4 {
+  counter-increment: sss; font-size: var(--text-lg); font-weight: 600;
+  margin: 1.6rem 0 .4rem; color: var(--color-text);
+}
+.layout main h4::before { content: counter(s) '.' counter(ss) '.' counter(sss); }
+.layout main h2::before,
+.layout main h3::before,
+.layout main h4::before {
+  margin-right: var(--spacing-2); color: var(--color-muted-light);
+  font-weight: 600; font-variant-numeric: tabular-nums;
+}
+/* Titre non numéroté dans un doc. */
+.layout main .no-num { counter-increment: none; }
+.layout main .no-num::before { content: none; margin: 0; }
+
+/* ---------- Texte du doc ---------- */
+.layout main p, .layout main li {
+  font-size: var(--text-lg); color: var(--color-text-muted); line-height: 1.8;
+}
+.layout main p { margin: .9rem 0; max-width: var(--measure); }
+.layout main ul, .layout main ol { margin: .9rem 0 .9rem 1.3rem; max-width: var(--measure); }
+.layout main li { margin: .35rem 0; padding-left: .2rem; }
+.layout main li::marker { color: var(--color-border-mid); }
+.layout main li > ul, .layout main li > ol { margin-top: .3rem; margin-bottom: .3rem; }
+.lead--doc { font-size: var(--text-xl); max-width: 64ch; margin-bottom: 1.6rem; }
+
+/* ---------- Note et renvoi ---------- */
+p.note, div.note {
+  max-width: var(--measure); margin: 1.3rem 0;
+  padding-left: 1.2rem; border-left: 1px solid var(--color-border-mid);
+}
+div.note p { margin: .55rem 0; }
+div.note p:first-child { margin-top: 0; }
+div.note > :last-child { margin-bottom: 0; }
+div.note ul, div.note ol { margin-left: 1.1rem; }
+
+.renvoi {
+  max-width: var(--measure); margin: var(--spacing-5) 0;
+  padding: 1.4rem var(--spacing-5);
+  border: 1px solid var(--color-border-mid); border-radius: var(--radius-sm);
+}
+.renvoi p:first-child { margin-top: 0; }
+.renvoi p:last-child { margin-bottom: 0; }
+.renvoi .url { font-family: var(--font-mono); font-size: var(--text-base); word-break: break-all; }
+
+/* ---------- Procédure ---------- */
+ol.proc {
+  list-style: none; counter-reset: pr; margin: 1.3rem 0; padding: 0;
+  max-width: var(--measure);
+}
+ol.proc > li { counter-increment: pr; position: relative; padding: 0 0 1.2rem 2.3rem; margin: 0; }
+ol.proc > li::before {
+  content: counter(pr) '.'; position: absolute; left: 0; top: 0;
+  font-size: var(--text-base); font-weight: 600; color: var(--color-muted-light);
+  font-variant-numeric: tabular-nums;
+}
+ol.proc > li:last-child { padding-bottom: 0; }
+ol.proc ul, ol.proc ol { margin-left: 1.1rem; }
+
+/* ---------- Liste de contrôle ---------- */
+ul.check { list-style: none; margin: 1.3rem 0; padding: 0; max-width: var(--measure); }
+ul.check li {
+  position: relative; padding: .6rem 0 .6rem 1.8rem;
+  border-bottom: 1px solid var(--color-border); margin: 0;
+}
+ul.check li:first-child { border-top: 1px solid var(--color-border); }
+ul.check li::before {
+  content: ''; position: absolute; left: 0; top: 1.05rem;
+  width: 11px; height: 11px; border: 1px solid var(--color-border-strong);
+}
+
+/* ---------- Glossaire et fiche ---------- */
+dl.gloss { max-width: var(--measure); }
+dl.gloss dt { font-size: var(--text-lg); font-weight: 600; color: var(--color-text); margin-top: 1.1rem; }
+dl.gloss dt:first-child { margin-top: 0; }
+dl.gloss dd { font-size: var(--text-lg); color: var(--color-text-muted); line-height: 1.75; margin-top: .15rem; }
+dl.gloss dd ul { margin: .3rem 0 0 1.1rem; }
+
+.fiche { max-width: var(--measure); margin: var(--spacing-5) 0; }
+.fiche dt {
+  font-size: var(--text-3xs); font-weight: 600; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--color-muted-light); margin-top: var(--spacing-4);
+}
+.fiche dt:first-child { margin-top: 0; }
+.fiche dd { font-size: var(--text-md); color: var(--color-text-muted); line-height: 1.7; margin-top: .15rem; }
+
+/* ---------- Dépliable ---------- */
+details {
+  max-width: var(--measure); margin: 1.3rem 0;
+  border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border);
+}
+details + details { margin-top: -1.3rem; border-top: 0; }
+summary {
+  cursor: pointer; list-style: none; padding: .85rem var(--spacing-6) .85rem 0;
+  position: relative; font-size: var(--text-lg); font-weight: 600;
+  color: var(--color-text); line-height: 1.4;
+}
+summary::-webkit-details-marker { display: none; }
+summary::after {
+  content: ''; position: absolute; right: .35rem; top: 1.25rem;
+  width: 7px; height: 7px;
+  border-right: 1.5px solid var(--color-muted-light);
+  border-bottom: 1.5px solid var(--color-muted-light);
+  transform: rotate(45deg) translateY(-2px); transition: transform .2s ease;
+}
+details[open] > summary::after { transform: rotate(-135deg) translateY(-2px); }
+summary:hover::after { border-color: var(--color-text); }
+summary h3, summary h4 { display: inline; margin: 0; font-size: inherit; font-weight: inherit; }
+summary .compte { font-weight: 400; color: var(--color-muted-light); font-size: var(--text-base); margin-left: .4rem; }
+details > *:last-child { margin-bottom: 1.2rem; }
+details[open] > summary { border-bottom: 1px solid var(--color-border); margin-bottom: var(--spacing-4); }
+details .tw { max-width: none; }
+
+/* ---------- Bloc de code et bouton copier ---------- */
+.bloc { margin: 1.1rem 0; max-width: var(--measure); }
+.bloc__bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--spacing-4); padding-bottom: .35rem;
+}
+.bloc__label {
+  font-size: var(--text-2xs); font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--color-muted-light); overflow-wrap: anywhere;
+}
+.bloc pre {
+  background: var(--color-code-bg); border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm); padding: .85rem var(--spacing-4);
+  overflow-x: auto; color: var(--color-text);
+  font-family: var(--font-mono); font-size: var(--text-base); line-height: 1.7;
+  -webkit-overflow-scrolling: touch; transition: border-color .3s, background .3s;
+}
+.bloc pre code { background: none; border: 0; padding: 0; font-size: 1em; white-space: pre; color: inherit; }
+
+button.cp {
+  flex-shrink: 0; background: none; border: 0; padding: 2px; cursor: pointer;
+  color: var(--color-muted-light); line-height: 0; border-radius: var(--radius-xs);
+  transition: var(--ease-fast);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+button.cp svg { width: 14px; height: 14px; stroke-width: 1.7; }
+button.cp:hover { color: var(--color-text); background: var(--color-accent-light); }
+button.cp .ico-ok { display: none; }
+button.cp[data-ok] { color: var(--color-text); }
+button.cp[data-ok] .ico-cp { display: none; }
+button.cp[data-ok] .ico-ok { display: block; }
+code.cmd { padding-right: .2em; }
+button.cp--inline { vertical-align: -.2em; margin-left: .15em; }
+button.cp--inline svg { width: 12px; height: 12px; }
+
+button.cp-lien {
+  background: none; border: 0; padding: 1px 2px; margin-left: .18em; cursor: pointer;
+  color: var(--color-border-mid); line-height: 0; border-radius: var(--radius-xs);
+  vertical-align: -.18em; transition: var(--ease-fast);
+}
+button.cp-lien svg { width: 12px; height: 12px; stroke-width: 1.8; }
+button.cp-lien:hover, button.cp-lien:focus-visible { color: var(--color-text); background: var(--color-accent-light); }
+button.cp-lien .ico-ok { display: none; }
+button.cp-lien[data-ok] { color: var(--color-text); }
+button.cp-lien[data-ok] .ico-cp { display: none; }
+button.cp-lien[data-ok] .ico-ok { display: block; }
+
+/* ---------- Prompt copiable ---------- */
+.prompt {
+  position: relative; max-width: var(--measure); margin: var(--spacing-4) 0 0;
+  background: var(--color-bg-alt); border-left: 2px solid var(--color-border-mid);
+  padding: .9rem 2.6rem .9rem 1.15rem; transition: border-color var(--ease-fast);
+}
+.prompt:hover { border-left-color: var(--color-muted-light); }
+.prompt p { margin: 0; font-size: var(--text-lg); color: var(--color-text); line-height: 1.7; max-width: none; }
+.prompt button.cp { position: absolute; top: .6rem; right: .6rem; }
+p.usage {
+  font-size: var(--text-base); color: var(--color-muted-light); line-height: 1.6;
+  margin: .45rem 0 1.3rem; padding-left: 1.15rem; max-width: var(--measure);
+}
+
+/* ---------- Carte de lien compacte ---------- */
+.cartes {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--spacing-3); margin: var(--spacing-5) 0;
+  max-width: none; list-style: none; padding: 0;
+}
+.cartes li { margin: 0; padding: 0; }
+.carte {
+  display: block; height: 100%; padding: var(--spacing-4) 1.1rem;
+  border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+  transition: var(--ease-fast);
+}
+.carte:hover { border-color: var(--color-border-mid); }
+.carte__nom {
+  font-size: var(--text-lg); font-weight: 600; color: var(--color-text);
+  display: block; margin-bottom: .2rem;
+}
+.carte__quoi { font-size: var(--text-base); color: var(--color-text-muted); line-height: 1.55; display: block; }
+
+/* ---------- Pied de page du doc ---------- */
+.footer--doc {
+  border-top: 1px solid var(--color-border); background: var(--color-bg-alt);
+  padding: 2.5rem var(--spacing-6); transition: background .3s;
+}
+.footer--doc .footer__inner { max-width: var(--max-doc); margin: 0 auto; }
+.footer--doc p {
+  font-size: var(--text-sm); color: var(--color-muted-light);
+  line-height: 1.8; max-width: 80ch; margin: var(--spacing-2) 0;
+}
+.footer--doc a { color: var(--color-text-muted); }
+
+/* ---------- Reveal ligne par ligne (kugiri) ----------
+   Les lignes ne sont masquées que si la bibliothèque a réellement posé
+   data-split. Script en échec, CDN bloqué, JS coupé ⇒ texte visible. */
+[data-split] [data-line] { opacity: 0; transform: translateY(.45em); }
+[data-reveal="joue"] [data-line] {
+  animation: kugiri-monte .7s var(--ease-out) forwards;
+  animation-delay: calc(var(--line) * 70ms);
+}
+[data-reveal="fini"] [data-line] { opacity: 1; transform: none; }
+@keyframes kugiri-monte { to { opacity: 1; transform: none; } }
+
+
+/* ============================================================
+   9. Composants de l'archétype vitrine
+   Sections pleine largeur, cartes à halo, dock flottant.
+   ============================================================ */
+
+main.vitrine { padding-top: var(--nav-h); position: relative; z-index: 2; }
+.section { padding: var(--spacing-8) var(--spacing-6); }
+.section--alt { background: var(--color-bg-alt); transition: background .3s; }
+.wrap { max-width: var(--max); margin: 0 auto; }
+main.vitrine section[id] { scroll-margin-top: calc(var(--nav-h) + var(--spacing-4)); }
+
+/* ---------- Surtitre et titre de section ---------- */
+.eyebrow {
+  font-size: var(--text-2xs); font-weight: 600; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--color-muted-light);
+  margin-bottom: .75rem; display: flex; align-items: center; gap: var(--spacing-2);
+}
+.eyebrow::before {
+  content: ''; display: inline-block; width: 20px; height: 1px;
+  background: var(--color-border-mid);
+}
+.eyebrow svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+.h-section {
+  font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 700; letter-spacing: -.03em;
+  color: var(--color-text); margin-bottom: .75rem; line-height: 1.15;
+  display: flex; align-items: center; gap: .55rem;
+}
+.h-section svg { width: 22px; height: 22px; flex-shrink: 0; opacity: .5; }
+
+.lead {
+  font-size: var(--text-lg); color: var(--color-text-muted);
+  max-width: 560px; margin-bottom: 2.5rem; line-height: 1.75;
+}
+
+/* ---------- Spotlight de curseur ---------- */
+.spotlight {
+  position: fixed; inset: 0; pointer-events: none; z-index: 9;
+  background: radial-gradient(650px circle at var(--mx,-300px) var(--my,-300px),
+    var(--color-spotlight), transparent 42%);
+}
+
+/* ---------- Hero ---------- */
+.hero {
+  min-height: calc(100vh - var(--nav-h));
+  display: flex; align-items: center;
+  padding: calc(var(--nav-h) + var(--spacing-7)) var(--spacing-6) 4rem;
+  position: relative; overflow: hidden;
+}
+.hero::after {
+  content: ''; position: absolute; inset: 0;
+  background-image: radial-gradient(circle, var(--color-border) 1px, transparent 1px);
+  background-size: 28px 28px; opacity: .3; pointer-events: none;
+}
+[data-theme="dark"]  .hero::after { opacity: .1; }
+[data-theme="sepia"] .hero::after { opacity: .2; }
+.hero__inner {
+  max-width: var(--max); margin: 0 auto; width: 100%;
+  display: grid; grid-template-columns: 1fr 225px;
+  gap: 5rem; align-items: center; position: relative; z-index: 1;
+}
+.hero__kicker {
+  font-size: var(--text-2xs); font-weight: 600; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--color-muted-light);
+  margin-bottom: 1.25rem; display: flex; align-items: center; gap: var(--spacing-2);
+}
+.hero__kicker::before {
+  content: ''; display: inline-block; width: 20px; height: 1px;
+  background: var(--color-border-mid);
+}
+.hero__name {
+  font-size: clamp(3rem, 7vw, 5rem); font-weight: 700; letter-spacing: -.05em;
+  line-height: .98; color: var(--color-text); margin-bottom: var(--spacing-5);
+}
+.hero__name span {
+  display: block; font-weight: 300; font-size: .52em;
+  letter-spacing: -.02em; color: var(--color-text-muted); margin-top: .12em;
+}
+.hero__subtitle {
+  font-size: var(--text-xl); color: var(--color-text-muted);
+  max-width: 480px; margin-bottom: var(--spacing-6); line-height: 1.7;
+}
+.hero__tags { display: flex; flex-wrap: wrap; gap: .375rem; }
+.hero__tags .tag { text-transform: none; letter-spacing: 0; }
+
+/* ---------- Lien social en verre ---------- */
+.hero__links { display: flex; flex-direction: column; gap: .45rem; }
+.hero__link {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-2);
+  font-size: var(--text-xs); font-weight: 600;
+  color: var(--color-text-muted); text-decoration: none;
+  padding: .5rem .875rem; border-radius: var(--radius);
+  background: var(--color-glass-bg);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-glass-border); box-shadow: var(--shadow-glass);
+  transition: var(--ease); white-space: nowrap;
+  position: relative; overflow: hidden;
+}
+.hero__link::after { display: none; }
+.hero__link::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(110px circle at var(--lx,50%) var(--ly,50%),
+    var(--color-accent-glow), transparent 80%);
+  opacity: 0; transition: opacity .3s;
+}
+.hero__link:hover { color: var(--color-text); transform: translateX(-2px); border-color: var(--color-border-mid); }
+.hero__link:hover::before { opacity: 1; }
+.hero__link-arr { font-size: .55rem; opacity: .35; transition: opacity var(--ease), transform var(--ease); }
+.hero__link:hover .hero__link-arr { opacity: 1; transform: translate(3px,-2px); }
+
+/* ---------- Carte : patron commun ----------
+   Variantes : ne surcharger que --glow et le padding. */
+.card {
+  background: var(--color-bg-card); border: 1px solid var(--color-border);
+  border-radius: var(--radius); padding: 1.125rem 1.25rem;
+  transition: var(--ease); position: relative; overflow: hidden;
+  --glow: 160px;
+}
+.card::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(var(--glow) circle at var(--cx,50%) var(--cy,50%),
+    var(--color-accent-glow), transparent 80%);
+  opacity: 0; transition: opacity .4s; pointer-events: none;
+}
+.card:hover { border-color: var(--color-border-mid); transform: translateY(-3px); box-shadow: var(--shadow-md); }
+.card:hover::before { opacity: 1; }
+.card > * { position: relative; }
+
+.card--sm   { padding: .875rem 1rem; --glow: 120px; }
+.card--lg   { border-radius: var(--radius-lg); padding: 1.75rem 1.75rem 1.5rem; --glow: 240px; }
+.card--media { border-radius: var(--radius-lg); padding: 0; --glow: 220px; display: flex; flex-direction: column; }
+.card--featured { border-top: 2px solid var(--color-text); }
+
+.card__label {
+  font-size: var(--text-3xs); font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--color-muted-light); margin-bottom: .3rem;
+}
+.card__title {
+  font-size: var(--text-lg); font-weight: 700; color: var(--color-text);
+  line-height: 1.3; margin-bottom: var(--spacing-2); letter-spacing: -.01em;
+}
+.card__desc { font-size: var(--text-base-sm); color: var(--color-text-muted); line-height: 1.65; }
+.card__body { padding: 1.25rem 1.375rem; flex: 1; display: flex; flex-direction: column; position: relative; z-index: 2; }
+.card__img { width: 100%; height: 180px; object-fit: cover; filter: grayscale(35%); transition: filter .4s; }
+.card--media:hover .card__img { filter: grayscale(0%); }
+
+.cards-grid    { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--spacing-3); }
+.cards-grid--lg { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: var(--spacing-5); }
+
+/* ---------- Dock flottant ---------- */
+.dock {
+  position: fixed; bottom: var(--spacing-4); left: 50%;
+  transform: translateX(-50%); z-index: 300;
+  max-width: calc(100vw - 1.5rem);
+  transition: transform .4s cubic-bezier(.4,0,.2,1), opacity .3s ease;
+}
+.dock--hidden { transform: translateX(-50%) translateY(170%); opacity: 0; pointer-events: none; }
+.dock__inner {
+  display: flex; align-items: center; gap: var(--spacing-1);
+  max-width: 100%; padding: .3125rem; border-radius: var(--radius-pill);
+  background: var(--color-glass-bg);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid var(--color-glass-border); box-shadow: var(--shadow-dock);
+  transition: background .3s, border-color .3s, box-shadow .3s;
+}
+.dock__sep { flex-shrink: 0; width: 1px; height: 20px; background: var(--color-border); margin: 0 .125rem; }
+.dock__scroll { position: relative; display: flex; align-items: center; gap: .125rem; min-width: 0; }
+.dock__pill {
+  position: absolute; top: 0; left: 0;
+  width: 38px; height: 38px; border-radius: var(--radius-pill);
+  background: var(--dock-pill); opacity: 0; pointer-events: none; z-index: 0;
+  transition: transform .45s cubic-bezier(.34,1.3,.64,1), opacity .25s ease, background .3s;
+}
+.dock__item {
+  position: relative; z-index: 1; flex: 0 0 auto;
+  width: 38px; height: 38px; border-radius: var(--radius-pill);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--color-text-muted); text-decoration: none;
+  background: none; border: none; padding: 0; cursor: pointer;
+  font-family: var(--font-sans);
+  transition: color .2s ease, background .2s ease;
+}
+.dock__item svg { width: 17px; height: 17px; }
+.dock__item:hover, .dock__item.active { color: var(--color-text); }
+/* Infobulle — remplace le soulignement animé désactivé plus haut. */
+.dock__item::after {
+  content: attr(data-tip); display: block;
+  position: absolute; bottom: calc(100% + 12px); left: 50%;
+  transform: translateX(-50%) translateY(5px);
+  background: var(--color-text); color: var(--color-bg);
+  font-size: var(--text-2xs); font-weight: 600; letter-spacing: .01em;
+  white-space: nowrap; padding: .3rem .55rem; border-radius: 5px;
+  width: auto; height: auto;
+  opacity: 0; pointer-events: none;
+  transition: opacity .18s ease, transform .18s ease;
+}
+.dock__item:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+@media (hover: none) { .dock__item::after { display: none; } }
+.dock .theme-btn { width: 38px; height: 38px; border: none; flex-shrink: 0; }
+.dock .theme-btn:hover { background: var(--color-accent-light); border: none; }
+.dock .theme-btn svg { width: 16px; height: 16px; }
+
+/* ---------- Frise chronologique ---------- */
+.tl { position: relative; padding-left: 1.25rem; }
+.tl::before {
+  content: ''; position: absolute; left: 0; top: var(--spacing-2); bottom: 0;
+  width: 1px; background: var(--color-border);
+}
+.tl__item { position: relative; padding-bottom: 1.75rem; }
+.tl__item:last-child { padding-bottom: 0; }
+.tl__dot {
+  position: absolute; left: -1.25rem; top: .45rem;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--color-bg); border: 1.5px solid var(--color-border-mid);
+  transform: translateX(-3px); transition: background .2s, border-color .2s;
+}
+.tl__item:hover .tl__dot { background: var(--color-text); border-color: var(--color-text); }
+.tl__date {
+  font-size: var(--text-3xs); font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--color-muted-light); margin-bottom: .3rem;
+}
+.tl__role { font-size: var(--text-md); font-weight: 600; color: var(--color-text); line-height: 1.4; margin-bottom: .2rem; }
+.tl__org { font-size: var(--text-base); color: var(--color-text-muted); margin-bottom: .4rem; }
+.tl__desc { font-size: var(--text-sm); color: var(--color-muted-light); line-height: 1.7; }
+.tl__desc em { color: var(--color-text-muted); font-size: .85em; line-height: 1.8; }
+
+/* ---------- Encadré sur fond alterné ---------- */
+.callout-box {
+  margin: 1.75rem 0; padding: 1.25rem 1.375rem;
+  border: 1px solid var(--color-border); border-radius: var(--radius);
+  background: var(--color-bg-alt);
+}
+.callout-box__title {
+  font-size: var(--text-3xs); font-weight: 700; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--color-muted-light);
+  margin-bottom: .875rem; display: flex; align-items: center; gap: .4rem;
+}
+.callout-box__title svg { width: 11px; height: 11px; }
+
+/* ---------- Pagination de carrousel ---------- */
+.dots { display: flex; justify-content: center; gap: .375rem; margin-top: .875rem; }
+.dot {
+  width: 7px; height: 7px; border-radius: 4px; background: var(--color-border-mid);
+  border: none; padding: 0; cursor: pointer;
+  transition: all .4s cubic-bezier(.4,0,.2,1); flex-shrink: 0;
+}
+.dot.active { width: 24px; background: var(--color-text); }
+.dot:hover:not(.active) { background: var(--color-border-strong); }
+
+.nav-btn {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 1px solid var(--color-border); background: var(--color-bg-card);
+  cursor: pointer; color: var(--color-text-muted);
+  display: flex; align-items: center; justify-content: center; transition: var(--ease);
+}
+.nav-btn:hover { border-color: var(--color-border-mid); color: var(--color-text); background: var(--color-accent-light); }
+.nav-btn svg { width: 14px; height: 14px; }
+
+/* ---------- Photo ---------- */
+.photo {
+  width: 100%; border-radius: var(--radius); display: block;
+  filter: grayscale(15%); transition: filter .4s;
+}
+.photo:hover { filter: grayscale(0%); }
+
+/* ---------- Pied de page de la vitrine ---------- */
+.footer {
+  background: var(--color-bg-alt); color: var(--color-muted-light);
+  padding: 1.75rem var(--spacing-6); text-align: center;
+  font-size: var(--text-xs); letter-spacing: .04em;
+  border-top: 1px solid var(--color-border);
+  position: relative; z-index: 2; transition: background .3s, color .3s;
+}
+.footer a { color: var(--color-text-muted); }
+[data-theme="dark"] .footer { background: #000; color: rgba(128,128,128,.5); border-top-color: #1a1a1a; }
+[data-theme="dark"] .footer a { color: rgba(255,255,255,.25); }
+[data-theme="dark"] .footer a:hover { color: rgba(255,255,255,.65); }
+
+/* ---------- Fondu au défilement ---------- */
+[data-fade] { opacity: 0; transform: translateY(18px); transition: opacity .5s ease, transform .5s ease; }
+[data-fade].visible { opacity: 1; transform: none; }
+
+
+/* ============================================================
+   10. Media queries
+   Regroupées en fin de feuille, comme dans les deux sources.
+   ============================================================ */
+
+/* ---------- 1080px : le sommaire du doc se détache ---------- */
+@media (max-width: 1080px) {
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .toc {
+    position: static; max-height: none; padding: 2.5rem 0 1.75rem;
+    overflow: visible; border-bottom: 1px solid var(--color-border);
+  }
+  .toc ol { columns: 2; column-gap: 2.5rem; }
+  .layout main { padding-top: 2.25rem; }
+}
+
+/* ---------- 1000px : toutes les grilles passent à une colonne ---------- */
+@media (max-width: 1000px) {
+  .hero__inner { grid-template-columns: 1fr; gap: 2.5rem; }
+  .hero__links { flex-direction: row; flex-wrap: wrap; }
+  .hero__link { flex: 1 1 auto; justify-content: center; }
+  .cards-grid--lg { grid-template-columns: 1fr; }
+}
+
+/* ---------- 860px : le dock devient défilable ---------- */
+@media (max-width: 860px) {
+  .dock { bottom: .625rem; max-width: calc(100vw - 1rem); }
+  .dock__scroll {
+    overflow-x: auto; overflow-y: hidden;
+    scrollbar-width: none; -ms-overflow-style: none; scroll-behavior: smooth;
+  }
+  .dock__scroll::-webkit-scrollbar { display: none; }
+}
+
+/* ---------- 760px : racine 16px pour le doc (la mesure en ch casse plus tôt) ----------
+   Déclenché par <html data-page="doc"> — pas par :has(), qui demanderait
+   Firefox 121 alors que le plancher annoncé de la charte est Firefox 100. */
+@media (max-width: 760px) {
+  [data-page="doc"] { font-size: 16px; }
+  .topbar--doc .topbar__inner,
+  .doc-head, .layout, .footer--doc { padding-left: 1.125rem; padding-right: 1.125rem; }
+  .doc-head { padding-top: calc(var(--nav-h) + 2.25rem); padding-bottom: 2.25rem; }
+  .toc ol { columns: 1; }
+  .layout main section { margin-bottom: var(--spacing-7); }
+  .bloc pre { font-size: .78125rem; }
+  th, td { padding-right: .8rem; }
+  .renvoi { padding: 1.1rem 1.15rem; }
+}
+
+/* ---------- 640px : racine 16px pour la vitrine ---------- */
+@media (max-width: 640px) {
+  html { font-size: 16px; }
+  .section { padding: var(--spacing-7) 1.125rem; }
+  .hero { padding: calc(var(--nav-h) + 1.75rem) 1.125rem 2.5rem; }
+  .hero__name { font-size: clamp(2rem, 10vw, 3.5rem); }
+  .hero__links { flex-direction: column; }
+  .hero__link { justify-content: space-between; }
+  .cards-grid { grid-template-columns: 1fr; }
+  .card--lg { padding: 1.375rem 1.25rem; }
+  .btn { padding: .55rem 1rem; }
+  .topbar__inner { padding: 0 1.125rem; gap: var(--spacing-4); }
+}
+
+/* ---------- 400px : densité minimale ---------- */
+@media (max-width: 400px) {
+  .section { padding: 2.5rem var(--spacing-4); }
+  .hero { padding: calc(var(--nav-h) + 1.25rem) var(--spacing-4) var(--spacing-6); }
+  .hero__name { font-size: clamp(1.75rem, 9vw, 2.5rem); }
+  .hero__tags .tag { font-size: .6875rem; padding: .25rem .5rem; }
+  .topbar__inner { gap: .75rem; }
+}
+
+/* ---------- Mouvement réduit ---------- */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  [data-fade] { opacity: 1; transform: none; }
+  [data-split] [data-line] { opacity: 1; transform: none; }
+  .spotlight { display: none; }
+}
+
+/* ---------- Impression ---------- */
+@media print {
+  .topbar, .dock, .toc, .spotlight, .skip-link, .progress, #toast,
+  button.cp, button.cp-lien, .nav-btn, .dots { display: none !important; }
+  body { background: #fff; color: #000; font-size: 11pt; padding-bottom: 0; }
+  .doc-head { padding-top: 0; }
+  .layout { display: block; padding: 0; }
+  .layout main, main.vitrine { padding: 0; }
+  .section { padding: 1rem 0; background: none !important; }
+  section { page-break-inside: avoid; }
+  details { border: 0; }
+  details[open] > summary::after, summary::after { display: none; }
+  .bloc pre { background: #f6f6f6; border: 1px solid #ccc; }
+  .card, .callout-box { box-shadow: none !important; border: 1px solid #ccc; }
+  a { color: #000; }
+  [data-fade] { opacity: 1 !important; transform: none !important; }
+  [data-split] [data-line] { opacity: 1 !important; transform: none !important; }
+}
+
+/* ---------- Propre à cette page ---------- */
+
+/* Schémas ASCII : traités comme un bloc de code, sans retour à la ligne. */
+.schema pre { white-space: pre; line-height: 1.45; font-size: var(--text-xs); }
+
+/* Les tableaux de référence débordent volontiers de la mesure de lecture. */
+.tw--large { max-width: none; }
+.tw--large table { min-width: 42rem; }
+
+/* Pied de page : colonnes de crédits. */
+.credits {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--spacing-5) var(--spacing-6);
+  margin-bottom: var(--spacing-5);
+  padding-bottom: var(--spacing-5);
+  border-bottom: 1px solid var(--color-border);
+}
+.credits h2 {
+  font-size: var(--text-3xs); font-weight: 700; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--color-muted-light);
+  margin: 0 0 var(--spacing-3); padding: 0; border: 0; line-height: 1.4;
+}
+.credits h2::before { content: none; }
+.credits ul { list-style: none; margin: 0; padding: 0; max-width: none; }
+.credits li {
+  font-size: var(--text-sm); color: var(--color-muted-light);
+  line-height: 1.65; margin: 0 0 var(--spacing-2); padding: 0;
+}
+
+/* ---------- Recherche dans la page ---------- */
+.recherche {
+  margin-bottom: var(--spacing-4);
+  padding-bottom: var(--spacing-4);
+  border-bottom: 1px solid var(--color-border);
+}
+.recherche .field__input { font-size: var(--text-base-sm); padding: .4rem .6rem; }
+.recherche__compte {
+  font-size: var(--text-xs); color: var(--color-text-muted);
+  letter-spacing: .04em; margin: var(--spacing-2) 0 0;
+  font-variant-numeric: tabular-nums; line-height: 1.5;
+}
+.recherche__compte:empty { display: none; }
+.recherche__aide {
+  font-size: var(--text-3xs); color: var(--color-muted-light);
+  letter-spacing: .04em; margin: var(--spacing-1) 0 0;
+}
+
+/* Résultats : même grammaire que le sommaire, sans numérotation. */
+.resultats { list-style: none; margin: 0; padding: 0; max-width: none; }
+.resultats li { margin: 0; padding: 0; }
+.resultats a {
+  display: block; padding: .5rem 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-base-sm); line-height: 1.5;
+  color: var(--color-text-muted);
+}
+.resultats a::after { display: none; }
+.resultats a:hover, .resultats a:focus-visible { color: var(--color-text); }
+.resultats__section {
+  display: block; font-size: var(--text-3xs); font-weight: 600;
+  letter-spacing: .16em; text-transform: uppercase;
+  color: var(--color-muted-light); margin-bottom: .15rem;
+}
+.resultats a:hover .resultats__section { color: var(--color-text-muted); }
+
+/* Termes trouvés : par la valeur et la graisse, jamais par la couleur. */
+mark {
+  background: var(--color-accent-light); color: var(--color-text);
+  font-weight: 600; border-radius: var(--radius-xs); padding: 0 .12em;
+}
+
+/* Bloc visé : le fond s'efface, le temps de le repérer. */
+.cible { animation: cible 2.4s var(--ease-out); }
+@keyframes cible {
+  from { background: var(--color-accent-light); }
+  to   { background: transparent; }
+}
+
+/* Pendant une recherche, les résultats remplacent le sommaire. */
+.toc--recherche > nav, .toc--recherche .toc__retour { display: none; }
+
+/* Durées de l'écran de chargement : alignées en colonne. */
+.etat { font-variant-numeric: tabular-nums; white-space: nowrap; }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#contenu">Aller au contenu</a>
+
+<header class="topbar">
+  <div class="topbar__inner">
+    <a href="https://azilan.me" class="topbar__logo">azilan<em>.</em></a>
+    <span class="topbar__crumb">Observatoire des revues africaines &nbsp;&rsaquo;&nbsp; Documentation technique</span>
+    <button class="icon-btn" id="printBtn" type="button" aria-label="Imprimer ou enregistrer en PDF" title="Imprimer ou enregistrer en PDF">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+    </button>
+    <button class="icon-btn" id="themeBtn" type="button" aria-label="Basculer le thème" title="Basculer le thème">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    </button>
+    <span class="progress" id="progress" aria-hidden="true"></span>
+  </div>
+</header>
+
+<div class="doc-head">
+  <div class="doc-head__inner">
+    <p class="kicker">Documentation technique</p>
+    <h1>Observatoire des revues africaines en libre accès</h1>
+    <p class="standfirst">
+      Application monofichier à rendu client, adossée à un Worker Cloudflare qui met en cache le corpus
+      du DOAJ et son enrichissement. Ce document décrit l'architecture, les six bases d'indexation,
+      les visualisations, la fiche de revue et le fonctionnement des tâches planifiées.
+    </p>
+    <dl class="doc-meta">
+      <div><dt>Version</dt><dd>V5.2</dd></div>
+      <div><dt>Auteur</dt><dd>Awuvé Innocent Azilan</dd></div>
+      <div><dt>Licence</dt><dd>Application CC BY-NC 4.0</dd></div>
+      <div><dt>Mise à jour</dt><dd>13 novembre 2026</dd></div>
+    </dl>
+  </div>
+</div>
+
+<div class="layout">
+
+  <aside class="toc" id="sommaire" aria-label="Sommaire">
+    <p class="toc__title">Sur cette page</p>
+    <nav>
+      <ol>
+        <li><a href="#vue-ensemble">Vue d'ensemble</a></li>
+        <li><a href="#fichiers">Structure des fichiers</a></li>
+        <li><a href="#donnees">Architecture des données</a></li>
+        <li><a href="#colonnes">Colonnes de données</a></li>
+        <li><a href="#css">Architecture CSS</a></li>
+        <li><a href="#interface">Sections de l'interface</a></li>
+        <li><a href="#dataviz">Catalogue des visualisations</a></li>
+        <li><a href="#filtrage">Filtrage global</a></li>
+        <li><a href="#dependances">Dépendances front-end</a></li>
+        <li><a href="#worker">Worker Cloudflare</a></li>
+        <li><a href="#deploiement">Déploiement</a></li>
+        <li><a href="#resilience">Résilience du chargement</a></li>
+        <li><a href="#attention">Points d'attention</a></li>
+      </ol>
+    </nav>
+    <p class="toc__retour"><a href="https://africanjournals.azilan.me" target="_blank" rel="noopener noreferrer">Ouvrir l'observatoire&nbsp;↗</a></p>
+  </aside>
+
+  <main id="contenu">
+
+    <section id="vue-ensemble">
+      <h2>Vue d'ensemble</h2>
+      <p>
+        <strong>Application web monofichier</strong> (<code>index.html</code>, environ 9&nbsp;100 lignes)
+        à rendu entièrement côté client, sans framework ni étape de compilation. Elle consomme les métadonnées
+        des revues africaines en libre accès publiées par le DOAJ, les croise avec six bases d'indexation,
+        et les présente sous forme de tableau de bord&nbsp;: visualisations, catalogue filtrable, moteur de
+        recommandation et fiche individuelle par revue.
+      </p>
+      <p>
+        Le même fichier sert deux routes&nbsp;: le catalogue à la racine, et une
+        <strong>fiche de revue</strong> sur <code>/&lt;ISSN&gt;</code>. Le routage se fait en JavaScript
+        à partir de <code>location.pathname</code>&nbsp;; sur la route fiche, le catalogue n'est jamais construit.
+      </p>
+      <div class="bloc schema">
+        <div class="bloc__bar"><span class="bloc__label">Chaîne de données</span></div>
+<pre><code>Navigateur — index.html (client, sans framework)
+  |
+  |-- Corpus          --&gt; Worker Cloudflare /csv        --&gt; KV (JSON pré-filtré)
+  |-- Enrichissement  --&gt; Worker Cloudflare /enrichment --&gt; KV (Crossref, OpenAlex, OpenCitations)
+  |-- Cache local     --&gt; Cache API (CacheStorage)
+  |-- Indexation      --&gt; ajol_journals.csv, scopus_issns.json, wos_issns.json
+  |-- À la demande    --&gt; api.crossref.org, api.openalex.org, opencitations.net
+  |-- Synthèse IA     --&gt; Worker Cloudflare /topics     --&gt; Workers AI (Llama 3.1 8B)
+  |-- Cartographie    --&gt; Leaflet + tuiles Jawg / OpenStreetMap
+  '-- Taux de change  --&gt; open.er-api.com
+
+Worker Cloudflare (worker/worker.js)
+  |-- Cron hebdomadaire --&gt; corpus, agrégat mondial, tranche Crossref
+  '-- /report-oa, /report-oc, /report-cr &lt;-- les navigateurs renvoient ce qu'ils ont résolu</code></pre>
+      </div>
+      <p class="note">
+        <strong>Principe directeur.</strong> Une invocation de Worker ne dispose que d'une cinquantaine de
+        sous-requêtes. Le Worker ne peut donc pas interroger lui-même les milliers d'ISSN du corpus.
+        Ce sont les navigateurs des visiteurs qui résolvent Crossref, OpenAlex et OpenCitations, puis
+        renvoient leurs résultats au Worker, qui les mutualise dans son cache. Le cron ne fait que
+        reconstruire le corpus et rafraîchir une petite tranche tournante.
+      </p>
+    </section>
+
+    <section id="fichiers">
+      <h2>Structure des fichiers</h2>
+      <div class="bloc schema">
+        <div class="bloc__bar"><span class="bloc__label">Dépôt</span></div>
+<pre><code>OA/
+|-- index.html                    # Application complète — HTML + CSS + JS inline
+|-- index-new.html                # Carte mondiale, alimentée par /csv/world
+|-- documentation.html            # Ce document
+|-- ajol_journals.csv             # Index AJOL (jeu de données Zenodo)
+|-- apc_african_journals.csv      # APC en devises d'origine
+|-- apc_african_journals_eur.csv  # APC convertis en euros
+|-- wos_issns.json                # ISSN Web of Science et collections
+|-- scopus_issns.json             # ISSN Scopus et statut
+|-- update_index_lists.py         # Régénère les deux listes ci-dessus
+|-- .github/workflows/
+|   '-- update-index-lists.yml    # Exécute ce script chaque lundi
+'-- worker/
+    |-- worker.js                 # Worker Cloudflare — cache et enrichissement
+    '-- wrangler.toml             # Déploiement, binding KV, binding IA, cron</code></pre>
+      </div>
+    </section>
+
+    <section id="donnees">
+      <h2>Architecture des données</h2>
+
+      <h3 id="donnees-worker">Source principale — le DOAJ via un Worker Cloudflare</h3>
+      <p>
+        Le Worker est un proxy-cache&nbsp;: il ne sert jamais le CSV brut du DOAJ au navigateur. Il télécharge
+        le CSV complet, ne garde que les lignes mentionnant un pays africain, projette les colonnes utiles
+        et stocke un JSON compact dans KV.
+      </p>
+      <div class="bloc schema">
+        <div class="bloc__bar"><span class="bloc__label">Construction du corpus</span></div>
+<pre><code>doaj.org/csv  (environ 25 Mo, 23 592 revues, 52 colonnes)
+      |
+      v
+Worker : pré-filtre ligne à ligne sur 54 pays africains  --&gt;  environ 1 000 lignes
+      |  puis lecteur RFC 4180 maison, projection de 24 colonnes demandées
+      v
+KV african_journals  (environ 1 Mo, 956 revues, 22 colonnes servies)
+      |
+      v
+GET https://doaj-african-cache.ynnonazaline.workers.dev/csv
+      |
+      v
+index.html : fetch avec AbortController, délai de 90 s
+      |-- JSON valide --&gt; Cache API + initWithData()
+      '-- CSV          --&gt; PapaParse  + initWithData()</code></pre>
+      </div>
+
+      <p><strong>Points d'entrée du Worker&nbsp;:</strong></p>
+      <div class="tw tw--large">
+        <table>
+          <caption>Routes exposées par <code>doaj-african-cache.ynnonazaline.workers.dev</code>, au 13 novembre 2026.</caption>
+          <thead>
+            <tr><th scope="col">Route</th><th scope="col">Méthode</th><th scope="col">Rôle</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row"><code>/csv</code> ou <code>/</code></th><td>GET</td><td>Corpus africain depuis KV. Si KV est vide, reconstruction en arrière-plan et <code>503</code> immédiat.</td></tr>
+            <tr><th scope="row"><code>/csv/world</code></th><td>GET</td><td>Agrégat mondial par pays, pour <code>index-new.html</code>. Construit à la demande si KV est vide.</td></tr>
+            <tr><th scope="row"><code>/enrichment</code></th><td>GET</td><td>Compteurs Crossref, sources OpenAlex et présences OpenCitations par ISSN. Mise en cache navigateur de 24 heures.</td></tr>
+            <tr><th scope="row"><code>/status</code></th><td>GET</td><td>Métadonnées du cache africain&nbsp;: <code>cachedAt</code>, <code>count</code>, <code>totalRows</code>.</td></tr>
+            <tr><th scope="row"><code>/refresh?secret=…</code></th><td>GET</td><td>Reconstruction manuelle du corpus puis de l'enrichissement. Protégée par un secret.</td></tr>
+            <tr><th scope="row"><code>/report-oa</code></th><td>POST</td><td>Le navigateur renvoie les sources OpenAlex qu'il a résolues.</td></tr>
+            <tr><th scope="row"><code>/report-oc</code></th><td>POST</td><td>Idem pour les présences OpenCitations.</td></tr>
+            <tr><th scope="row"><code>/report-cr</code></th><td>POST</td><td>Idem pour les compteurs Crossref. N'envoie que les nouveautés.</td></tr>
+            <tr><th scope="row"><code>/topics</code></th><td>POST</td><td>Résumés d'articles en entrée, présentation éditoriale de la revue en sortie, via Workers AI.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="donnees-cache">Cache navigateur</h3>
+      <p>
+        Le corpus est mis en cache dans la <strong>Cache API</strong> (<code>caches.open()</code>), et non dans
+        <code>localStorage</code>&nbsp;: le JSON dépasse largement le quota de ce dernier.
+      </p>
+      <div class="tw">
+        <table>
+          <thead><tr><th scope="col">Cache</th><th scope="col">Clé</th><th scope="col">Contenu</th></tr></thead>
+          <tbody>
+            <tr><th scope="row"><code>doaj-journal-json-cache-v2</code></th><td><code>json</code></td><td>Tableau des revues africaines</td></tr>
+            <tr><th scope="row"><code>doaj-journal-json-cache-ts-v2</code></th><td><code>ts</code></td><td>Horodatage de la dernière récupération</td></tr>
+            <tr><th scope="row"><code>doaj-journal-json-cache-ts-v2</code></th><td><code>cacheloaddate</code></td><td>Date lisible affichée dans l'en-tête</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">
+        <strong>Durée de validité réelle&nbsp;: sept jours.</strong> La constante qui la porte s'appelle
+        <code>ONE_MONTH_MS</code> mais vaut <code>7 * 24 * 60 * 60 * 1000</code>. Le nom est trompeur,
+        la valeur fait foi&nbsp;; un visiteur régulier conserve donc l'ancien corpus jusqu'à une semaine
+        après une mise à jour du Worker.
+      </p>
+
+      <h3 id="donnees-sequence">Séquence de chargement</h3>
+      <div class="bloc schema">
+        <div class="bloc__bar"><span class="bloc__label">Démarrage</span></div>
+<pre><code>Promise.all([ loadAJOL(), loadScopus(), loadWOS() ])   — listes d'indexation
+      |
+      v
+startLoad() --&gt; tryFetchCSV()
+      |-- Cache API encore valide ? --&gt; initWithData()
+      '-- sinon, fetch du Worker (délai 90 s)
+              |-- 200 + JSON --&gt; cache.put() + initWithData()
+              |-- 200 + CSV  --&gt; PapaParse    + initWithData()
+              '-- échec      --&gt; false
+
+initWithData()
+      |-- route /&lt;ISSN&gt; --&gt; attend l'enrichissement, rend la fiche, s'arrête là
+      '-- route racine  --&gt; listes déroulantes, cartes, visualisations
+                            puis renvoi des résultats au Worker à 15 s, 22 s et 28 s
+
+si tryFetchCSV() échoue :
+      --&gt; masquer #loading-overlay
+      --&gt; afficher #csv-modal : Réessayer, Télécharger le CSV, Dépôt manuel</code></pre>
+      </div>
+
+      <h3 id="donnees-indexation">Les six bases d'indexation</h3>
+      <p>
+        Chaque revue est confrontée à six référentiels. Cinq d'entre eux pilotent un interrupteur de la barre
+        <code>#db-filter-bar</code>, sous le catalogue&nbsp;; le sixième n'apparaît que dans le graphe d'indexation.
+      </p>
+      <div class="tw tw--large">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Base</th><th scope="col">Origine des données</th>
+              <th scope="col">Moment du chargement</th><th scope="col">Interrupteur</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">AJOL</th>
+              <td><code>ajol_journals.csv</code>, jeu de données Zenodo</td>
+              <td>PapaParse au démarrage, vers <code>AJOL_MAP</code></td>
+              <td><code>#toggle-ajol</code></td>
+            </tr>
+            <tr>
+              <th scope="row">Crossref</th>
+              <td><code>api.crossref.org</code>, mutualisé par <code>/enrichment</code></td>
+              <td>Cache au démarrage, puis carte par carte</td>
+              <td><code>#toggle-crossref</code></td>
+            </tr>
+            <tr>
+              <th scope="row">OpenAlex</th>
+              <td><code>api.openalex.org</code>, mutualisé par <code>/enrichment</code></td>
+              <td>Cache au démarrage, puis carte par carte</td>
+              <td><code>#toggle-openalex</code></td>
+            </tr>
+            <tr>
+              <th scope="row">Scopus</th>
+              <td><code>scopus_issns.json</code>, issu de <em>wosaide/wosaide-journal-lists</em></td>
+              <td><code>fetch</code> au démarrage, vers <code>SCOPUS_MAP</code></td>
+              <td><code>#toggle-scopus</code></td>
+            </tr>
+            <tr>
+              <th scope="row">Web of Science</th>
+              <td><code>wos_issns.json</code>, issu de <em>wosaide/wosaide-journal-lists</em></td>
+              <td><code>fetch</code> au démarrage, vers <code>WOS_MAP</code></td>
+              <td><code>#toggle-wos</code></td>
+            </tr>
+            <tr>
+              <th scope="row">OpenCitations</th>
+              <td><code>opencitations.net</code>, mutualisé par <code>/enrichment</code></td>
+              <td>Résolution par lots côté navigateur</td>
+              <td>— (graphe uniquement)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4 id="donnees-wos">Web of Science et Scopus&nbsp;: deux listes, un seul générateur</h4>
+      <p>
+        Ces deux bases n'exposent pas d'API publique interrogeable depuis le navigateur. Elles sont donc
+        servies sous forme de listes statiques, régénérées en amont&nbsp;:
+      </p>
+      <div class="tw">
+        <table>
+          <thead><tr><th scope="col">Fichier</th><th scope="col">Valeur associée à l'ISSN</th><th scope="col">Carte JavaScript</th></tr></thead>
+          <tbody>
+            <tr><th scope="row"><code>wos_issns.json</code></th><td>Collections, en chaîne — <code>"SCIE,SSCI"</code></td><td><code>WOS_MAP</code>, <code>WOS_META</code></td></tr>
+            <tr><th scope="row"><code>scopus_issns.json</code></th><td>Statut — <code>"Active"</code> ou <code>"Inactive"</code></td><td><code>SCOPUS_MAP</code>, <code>SCOPUS_META</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Les deux fichiers partagent la même forme&nbsp;: <code>generated_at</code>, <code>source</code>,
+        le volume de la liste d'origine, la taille du corpus au moment de la génération, le nombre de
+        correspondances, puis <code>issns</code>. Les ISSN y sont normalisés en <code>NNNN-NNNN</code>.
+      </p>
+      <p>
+        <code>update_index_lists.py</code> les reconstruit tous les deux à partir du dépôt
+        <em>wosaide/wosaide-journal-lists</em> — qui agrège les listes AHCI, ESCI, SCIE et SSCI pour
+        Web of Science, et un export daté pour Scopus — croisé avec le corpus DOAJ africain servi par
+        le Worker. Un seul script, donc un seul téléchargement du corpus et un seul workflow&nbsp;:
+        <code>.github/workflows/update-index-lists.yml</code>, chaque lundi à 04&nbsp;h&nbsp;UTC.
+        <code>python update_index_lists.py --self-check</code> vérifie le script avant chaque exécution.
+      </p>
+      <p class="note">
+        <strong>L'export Scopus est daté, pas fixe.</strong> Le dossier <code>SCOPUS/</code> du dépôt source
+        ne contient qu'un fichier à la fois, mais son nom porte le mois
+        (<code>ext_list_Jul_2026.csv</code>). Le script interroge l'API GitHub et retient le plus récent&nbsp;;
+        viser un nom en dur aurait figé la liste au premier export rencontré.
+      </p>
+      <p>
+        <code>wosCollections(issn, eissn)</code> renvoie le tableau des collections d'une revue. Il alimente
+        la pastille Web of Science du pied de carte, l'infobulle qui en détaille les collections, et la
+        carte «&nbsp;Liens&nbsp;» de la fiche, qui pointe vers la <em>Master Journal List</em> de Clarivate
+        avec l'ISSN en paramètre. Le logo employé est la marque Clarivate, intégrée en <code>data:</code>
+        URI pour éviter une requête supplémentaire.
+      </p>
+      <p class="note">
+        <strong>Dégradation.</strong> Si l'une de ces listes n'est pas joignable, sa carte reste vide et
+        le filtre correspondant devient neutre&nbsp;: il laisse passer toutes les revues au lieu de n'en
+        afficher aucune. Les quatre autres listes suivent la même règle.
+      </p>
+
+      <h3 id="donnees-enrichissement">Cache d'enrichissement et boucle de renvoi</h3>
+      <p>
+        <code>/enrichment</code> sert un objet unique qui réunit les trois bases résolues dynamiquement.
+        Il est récupéré une fois par visite, avant le premier rendu des cartes, et appliqué par
+        <code>_applyEnrichmentCache()</code>&nbsp;: les valeurs déjà présentes en mémoire ne sont jamais écrasées.
+      </p>
+      <div class="bloc">
+        <div class="bloc__bar"><span class="bloc__label">Forme de la réponse</span></div>
+<pre><code>{
+  "generated": "2026-11-12T21:10:36.742Z",
+  "journals": 956,
+  "foundCrossref": 833,
+  "crossref":      { "2071-4602": 427, "0303-1896": null },
+  "openalex":      { "2071-4602": { "id": "https://openalex.org/S…", "works_count": 427 } },
+  "opencitations": { "2071-4602": true }
+}</code></pre>
+      </div>
+      <p>
+        Une valeur <code>null</code> signifie «&nbsp;non résolu&nbsp;», pas «&nbsp;absent de la base&nbsp;». La distinction
+        compte&nbsp;: les filtres d'indexation traitent une valeur non résolue comme un laissez-passer, pour éviter
+        qu'une revue disparaisse du catalogue le temps qu'une requête aboutisse.
+      </p>
+      <p>
+        En fin de chargement, le navigateur renvoie au Worker ce qu'il a résolu&nbsp;: OpenAlex à 15&nbsp;secondes,
+        OpenCitations à 22&nbsp;secondes, Crossref à 28&nbsp;secondes. Côté Worker, chaque route <code>/report-*</code>
+        <strong>fusionne</strong> au lieu de remplacer&nbsp;: une valeur connue n'est jamais ramenée à l'état inconnu.
+        Le renvoi Crossref ne transmet que les écarts avec ce que le serveur sait déjà, pour ne pas écrire
+        dans KV à chaque visite.
+      </p>
+
+      <h3 id="donnees-apis">Services tiers</h3>
+      <div class="tw tw--large">
+        <table>
+          <thead><tr><th scope="col">Service</th><th scope="col">Usage</th><th scope="col">Déclencheur</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Crossref</th><td>Nombre d'articles déposés</td><td>Rendu d'une carte, si absent du cache</td></tr>
+            <tr><th scope="row">OpenAlex</th><td>Source, volume de publications, articles, sujets</td><td>Rendu d'une carte et fiche de revue</td></tr>
+            <tr><th scope="row">OpenCitations</th><td>Présence dans l'index de citations</td><td>Résolution par lots au démarrage</td></tr>
+            <tr><th scope="row">Open Exchange Rates</th><td>Conversion des APC en euros</td><td>Préchargement au démarrage</td></tr>
+            <tr><th scope="row">Jawg Maps et OpenStreetMap</th><td>Tuiles cartographiques, thème clair et sombre</td><td>Initialisation de Leaflet</td></tr>
+            <tr><th scope="row">Workers AI</th><td>Présentation éditoriale d'une revue</td><td>Clic explicite sur la fiche</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">
+        <strong>OpenAlex et les adresses de centre de données.</strong> L'offre gratuite d'OpenAlex bloque les
+        adresses IP cloud. Le Worker ne peut donc pas l'interroger&nbsp;; c'est pour cela que la résolution se fait
+        depuis le navigateur du visiteur, et remonte ensuite par <code>/report-oa</code>.
+      </p>
+    </section>
+
+    <section id="colonnes">
+      <h2>Colonnes de données</h2>
+      <p>
+        <code>COLS</code> associe un alias court au nom exact de la colonne DOAJ. Le Worker, lui, projette
+        <code>NEEDED_COLS</code>. Les deux listes ne se recouvrent pas entièrement, et l'écart a des
+        conséquences visibles.
+      </p>
+      <div class="tw tw--large">
+        <table>
+          <caption>Correspondance vérifiée sur l'export DOAJ du 12 octobre 2026, qui compte 52 colonnes.</caption>
+          <thead><tr><th scope="col">Alias</th><th scope="col">Colonne DOAJ</th><th scope="col" class="c">Servie</th></tr></thead>
+          <tbody>
+            <tr><th scope="row"><code>title</code></th><td>Journal title</td><td class="c"><span class="oui">oui</span></td></tr>
+            <tr><th scope="row"><code>issn</code>, <code>eissn</code></th><td>Journal ISSN (print version), Journal EISSN (online version)</td><td class="c"><span class="oui">oui</span></td></tr>
+            <tr><th scope="row"><code>url</code>, <code>doajUrl</code></th><td>Journal URL, URL in DOAJ</td><td class="c"><span class="oui">oui</span></td></tr>
+            <tr><th scope="row"><code>langs</code></th><td>Languages in which the journal accepts manuscripts</td><td class="c"><span class="oui">oui</span></td></tr>
+            <tr><th scope="row"><code>license</code></th><td>Journal license</td><td class="c"><span class="oui">oui</span></td></tr>
+            <tr><th scope="row"><code>country</code>, <code>countryOtherOrg</code></th><td>Country of publisher, Country of other organisation</td><td class="c"><span class="oui">oui</span></td></tr>
+            <tr><th scope="row"><code>weeks</code></th><td>Average number of weeks between article submission and publication</td><td class="c"><span class="oui">oui</span></td></tr>
+            <tr><th scope="row"><code>subjects</code>, <code>keywords</code></th><td>Subjects, Keywords</td><td class="c"><span class="oui">oui</span></td></tr>
+            <tr><th scope="row"><code>opensince</code></th><td>When did the journal start to publish all content using an open license?</td><td class="c"><span class="oui">oui</span></td></tr>
+            <tr><th scope="row"><code>addedon</code>, <code>mostRecent</code></th><td>Added on Date, Most Recent Article Added</td><td class="c"><span class="oui">oui</span></td></tr>
+            <tr><th scope="row"><code>reviewprocess</code></th><td>Review process</td><td class="c"><span class="oui">oui</span></td></tr>
+            <tr><th scope="row"><code>authorCopyright</code></th><td>Author holds copyright without restrictions</td><td class="c"><span class="oui">oui</span></td></tr>
+            <tr><th scope="row"><code>apc</code>, <code>apcAmount</code></th><td>APC, APC amount</td><td class="c"><span class="oui">oui</span></td></tr>
+            <tr><th scope="row"><code>preservation</code>, <code>preservationNL</code></th><td>Preservation Services, Preservation Service: national library</td><td class="c"><span class="oui">oui</span></td></tr>
+            <tr><th scope="row"><code>persistentIds</code></th><td>Persistent article identifiers</td><td class="c"><span class="oui">oui</span></td></tr>
+            <tr><th scope="row"><code>publisher</code></th><td>Publisher</td><td class="c"><span class="non">non</span></td></tr>
+            <tr><th scope="row"><code>licenseAttributes</code>, <code>licenseTermsUrl</code></th><td>License attributes, URL for license terms</td><td class="c"><span class="non">non</span></td></tr>
+            <tr><th scope="row"><code>reviewProcessUrl</code></th><td>Review process information URL</td><td class="c"><span class="non">non</span></td></tr>
+            <tr><th scope="row"><code>apcInfoUrl</code></th><td>APC information URL</td><td class="c"><span class="non">non</span></td></tr>
+            <tr><th scope="row"><code>numArticles</code></th><td>Number of Article Records</td><td class="c"><span class="non">non</span></td></tr>
+            <tr><th scope="row"><code>doi</code></th><td>La colonne n'existe plus dans l'export DOAJ</td><td class="c"><span class="non">non</span></td></tr>
+            <tr><th scope="row"><code>apcCurrency</code></th><td>Fusionnée dans «&nbsp;APC amount&nbsp;», sous la forme <code>150 USD</code></td><td class="c"><span class="non">non</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">
+        <strong>Six colonnes manquent au transport.</strong> <code>Publisher</code>,
+        <code>License attributes</code>, <code>URL for license terms</code>,
+        <code>Review process information URL</code>, <code>APC information URL</code> et
+        <code>Number of Article Records</code> existent dans le CSV du DOAJ, sont lues par
+        <code>index.html</code>, mais ne figurent pas dans <code>NEEDED_COLS</code>&nbsp;: elles n'atteignent
+        jamais le navigateur. Sur la fiche de revue, les lignes «&nbsp;Éditeur&nbsp;», «&nbsp;Texte de la licence&nbsp;»
+        et «&nbsp;Articles indexés&nbsp;» sont donc systématiquement absentes. Les ajouter à
+        <code>NEEDED_COLS</code> puis reconstruire le cache suffirait.
+      </p>
+      <p>
+        La détection de colonnes du Worker travaille en cascade&nbsp;: égalité stricte, puis insensible à la casse,
+        puis sous-chaîne. C'est elle qui fait correspondre l'alias <code>ISSN</code> à
+        <em>Journal ISSN (print version)</em>, et qui absorbe les renommages mineurs d'un export à l'autre.
+        Elle ne peut rien, en revanche, pour une colonne purement et simplement supprimée.
+      </p>
+    </section>
+
+    <section id="css">
+      <h2>Architecture CSS</h2>
+      <p>
+        Le style de l'application est écrit en couches successives dans <code>index.html</code>, chacune
+        recouvrant la précédente. Cette documentation, elle, suit une charte distincte et n'en partage rien.
+      </p>
+      <div class="tw tw--large">
+        <table>
+          <thead><tr><th scope="col" class="c">Ordre</th><th scope="col">Couche</th><th scope="col">Rôle</th></tr></thead>
+          <tbody>
+            <tr><th scope="row" class="c">1</th><td>Jetons de base</td><td>Variables de <code>:root</code>&nbsp;: couleurs, ombres, flou, pour les modes clair, sombre et sépia.</td></tr>
+            <tr><th scope="row" class="c">2</th><td>Composants</td><td><code>.glass</code>, <code>.card</code>, <code>.btn</code>, <code>.badge</code>, <code>.chip</code>, <code>.modal</code>.</td></tr>
+            <tr><th scope="row" class="c">3</th><td>Fonctionnalités</td><td>Carte plein écran, barre de filtre actif, barre d'outils, points d'activité.</td></tr>
+            <tr><th scope="row" class="c">4</th><td>Refonte sombre</td><td>Réécrit les jetons via <code>!important</code> et impose le thème sombre.</td></tr>
+            <tr><th scope="row" class="c">5</th><td>Passe typographique</td><td>Grille d'en-tête, hiérarchie des titres, espacement, grille de fond animée.</td></tr>
+            <tr><th scope="row" class="c">6</th><td>Fiche de revue</td><td><code>#oa-journal-page</code>&nbsp;: en-tête, bloc d'informations, carte, graphiques.</td></tr>
+            <tr><th scope="row" class="c">7</th><td>Contrôles TUFFUI</td><td>Interrupteurs et cases à cocher&nbsp;: ombre interne, glyphes, jamais la couleur seule.</td></tr>
+            <tr><th scope="row" class="c">8</th><td>Adaptatif</td><td>Ruptures à 980&nbsp;px et 700&nbsp;px.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">
+        <strong>Conséquence de la couche 4.</strong> Les <code>!important</code> globaux neutralisent en
+        pratique les classes <code>.dark</code> et <code>.sepia</code>. Le rendu est figé sur le thème sombre,
+        quel que soit l'état du bouton de bascule.
+      </p>
+    </section>
+
+    <section id="interface">
+      <h2>Sections de l'interface</h2>
+
+      <h3 id="ui-entete">En-tête et navigation</h3>
+      <ul>
+        <li>Point de marque animé, surtitre <em>DOAJ, Afrique, libre accès</em> et lien vers la documentation du CSV DOAJ.</li>
+        <li>Date de dernière mise à jour des données (<code>#last-update</code>), déduite de l'en-tête <code>X-Cache-Date</code> du Worker.</li>
+        <li>Compteur total de revues (<code>#total-count</code>).</li>
+        <li>Bouton de réinitialisation et bascule de thème.</li>
+      </ul>
+      <p>
+        <strong>Luma-bar</strong> (<code>.eui-luma</code>)&nbsp;: pilule flottante centrée au bas de
+        l'écran, en icônes seules. Le libellé n'est pas écrit sur la barre&nbsp;; il apparaît au survol
+        et au focus, dans une infobulle posée au-dessus. Les sections de la navigation sont séparées
+        par un filet vertical, l'entrée «&nbsp;Revues&nbsp;» porte le total en pastille, et
+        «&nbsp;Visualisations&nbsp;» ouvre au clic un sous-menu au-dessus de la pilule, refermé par
+        <kbd>Échap</kbd>, par un clic au dehors ou par le choix d'une entrée. Un
+        <code>IntersectionObserver</code> suit la section visible et déplace l'état actif. Le menu
+        diffère selon la route&nbsp;: sections du catalogue d'un côté, sections de la fiche de l'autre.
+      </p>
+      <p class="note">
+        <strong>La pilule flotte&nbsp;: il faut lui réserver sa place.</strong>
+        <code>body.has-eui-luma</code> ajoute 76&nbsp;px de marge basse (64&nbsp;px sous 480&nbsp;px,
+        où les items passent de 40 à 36&nbsp;px), sans quoi la barre recouvrirait le pied de page une
+        fois le défilement arrivé en bas. Elle remplace la navigation latérale de 248&nbsp;px, son
+        repli par <kbd>Ctrl</kbd>&nbsp;+&nbsp;<kbd>B</kbd>, son tiroir mobile et le décalage
+        <code>padding-left</code> qu'elle imposait à l'en-tête, au catalogue et à la fiche.
+      </p>
+      <p class="note">
+        <strong>Aucune entrée ne mène à une section absente.</strong> Les sections de la fiche
+        apparaissent à des moments différents — la carte au rendu, le graphe des publications à la fin
+        d'un <code>fetch</code>. Un <code>MutationObserver</code> placé sur <code>#oa-journal-page</code>
+        resynchronise le menu à chaque changement de style et masque les entrées dont la cible n'est pas
+        affichée. Sur une revue sans données OpenAlex, «&nbsp;Publications&nbsp;»,
+        «&nbsp;Présentation&nbsp;» et «&nbsp;Articles indexés&nbsp;» disparaissent au lieu de pointer
+        vers un bloc en <code>display:none</code>.
+      </p>
+
+      <h3 id="ui-reco">Recommandation de revues</h3>
+      <p>Filtrage multi-critères destiné à orienter un auteur vers les revues proches de son manuscrit.</p>
+      <div class="tw">
+        <table>
+          <thead><tr><th scope="col">Critère</th><th scope="col">Composant</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Titre de l'article</th><td>Champ texte, obligatoire</td></tr>
+            <tr><th scope="row">Langue de publication</th><td>Liste déroulante, obligatoire</td></tr>
+            <tr><th scope="row">Licence souhaitée</th><td>Liste déroulante</td></tr>
+            <tr><th scope="row">Mots-clés</th><td>Saisie avec autocomplétion, jusqu'à cinq termes</td></tr>
+            <tr><th scope="row">Délai soumission vers publication</th><td>Double curseur avec histogramme en direct</td></tr>
+            <tr><th scope="row">Conservation des droits d'auteur</th><td>Interrupteur</td></tr>
+            <tr><th scope="row">Publication sans frais</th><td>Interrupteur</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Les résultats s'exportent en Markdown ou en PDF.</p>
+      <p class="note">
+        <strong>Le critère «&nbsp;attribution de DOI&nbsp;» a été retiré.</strong> Il s'appuyait sur
+        <code>COLS.doi</code>, une colonne que le DOAJ ne publie plus&nbsp;: le champ était toujours vide
+        et activer l'interrupteur écartait la totalité du corpus. Le rétablir suppose une autre source,
+        Crossref par exemple.
+      </p>
+
+      <h3 id="ui-viz-renvoi">Visualisations</h3>
+      <p>
+        Seize graphiques occupent la section <code>#section-viz</code>, entre la recommandation et le
+        catalogue. Ils font l'objet de la section suivante, qui les détaille un par un.
+      </p>
+
+      <h3 id="ui-catalogue">Catalogue</h3>
+      <p><strong>Filtres disponibles&nbsp;:</strong></p>
+      <ul>
+        <li>Frais de publication&nbsp;: toutes, diamant, avec frais.</li>
+        <li>Recherche libre sur le titre, l'ISSN et l'eISSN, avec autocomplétion.</li>
+        <li>Indexation&nbsp;: cinq interrupteurs, combinés en <strong>conjonction</strong>. Une revue doit figurer
+          dans toutes les bases activées.</li>
+        <li>Filtre global venu d'un graphique, rappelé par <code>#active-filter-bar</code>.</li>
+      </ul>
+      <p>
+        <strong>Tris</strong> — six, dans un menu déroulant unique (<code>#sort-cycle-btn</code>)&nbsp;:
+        date d'ajout au DOAJ, alphabétique croissant, alphabétique décroissant, date du dernier article,
+        frais croissants (les revues sans frais d'abord), nombre d'articles OpenAlex décroissant.
+      </p>
+      <p>
+        <strong>Pagination</strong> — pages numérotées de 48&nbsp;revues (<code>PAGE_SIZE</code>), avec
+        indicateur glissant et ellipses autour de la page courante. Le compteur
+        <code>#cards-count-badge</code> affiche <em>n&nbsp;/&nbsp;948 revues</em> dès qu'un filtre est actif.
+      </p>
+      <p class="note">
+        <strong>Le filtrage est intégralement en JavaScript.</strong> Les interrupteurs posent une classe sur
+        <code>#all-cards</code>, mais cette classe ne sert plus qu'à signaler l'état d'attente d'une revue&nbsp;;
+        elle ne masque plus de carte. Le double filtrage antérieur, JavaScript d'un côté et règles
+        <code>display:none</code> de l'autre, pouvait afficher un compteur de 948 revues au-dessus d'une liste vide.
+      </p>
+      <p class="note">
+        <strong>La pagination survit au réenrichissement.</strong> Chaque résultat Crossref ou OpenAlex qui arrive
+        déclenche un nouveau rendu du catalogue. La page courante est conservée dans
+        <code>window._cardsPage</code> et restituée&nbsp;; sans quoi un changement de page était annulé
+        par le rendu suivant.
+      </p>
+      <p><strong>Contenu d'une carte de revue&nbsp;:</strong></p>
+      <ul>
+        <li>Titre cliquable vers la fiche, point d'activité coloré selon l'ancienneté du dernier article.</li>
+        <li>Drapeau et pays, ISSN et eISSN liés au portail ISSN.</li>
+        <li>Étiquettes&nbsp;: langues, licence, délai, mots-clés.</li>
+        <li>Pied de carte&nbsp;: la pastille de frais, un filet, puis la rangée des bases d'indexation.</li>
+        <li>Bouton signet et bouton d'ouverture de la fiche.</li>
+      </ul>
+
+      <h4 id="ui-apc">La pastille de frais</h4>
+      <p>
+        <code>makeApcChip(row)</code> produit une seule pastille, dans l'un de trois états&nbsp;:
+      </p>
+      <div class="tw">
+        <table>
+          <thead><tr><th scope="col">État</th><th scope="col">Affichage</th><th scope="col">Au survol</th></tr></thead>
+          <tbody>
+            <tr><th scope="row"><code>.apc-chip-free</code></th><td>Losange et «&nbsp;Sans frais&nbsp;», en vert</td><td>Accès diamant&nbsp;: ni frais d'auteur, ni abonnement</td></tr>
+            <tr><th scope="row"><code>.apc-chip-paid</code></th><td>Le montant en euros, précédé de <code>≈</code> s'il vient d'une conversion</td><td>Montant annoncé, montant converti, lien vers la grille tarifaire</td></tr>
+            <tr><th scope="row"><code>.apc-chip-unknown</code></th><td>«&nbsp;Frais&nbsp;», en gris</td><td>La revue facture, mais le DOAJ ne donne pas le montant</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">
+        <strong>Un prix n'est pas une alerte.</strong> L'état payant reste neutre&nbsp;; seul l'accès
+        diamant est coloré. La pastille est <strong>toujours présente</strong>&nbsp;: son absence ne
+        signifie plus «&nbsp;gratuit&nbsp;» ou «&nbsp;inconnu&nbsp;» selon les cas. Elle remplace à elle
+        seule le losange doré flottant dans l'angle de la carte, le badge rouge
+        «&nbsp;FRAIS&nbsp;|&nbsp;27&nbsp;EUR&nbsp;» du pied et la ligne «&nbsp;Statut Diamant&nbsp;» de la
+        fiche — trois langages visuels pour un seul champ.
+      </p>
+
+      <h4 id="ui-idx-chip">La rangée des bases</h4>
+      <p>
+        Les six bases partagent un gabarit unique, <code>.idx-chip</code>&nbsp;: hauteur fixe de
+        34&nbsp;px (30&nbsp;px sous 480&nbsp;px), largeur libre, logo contenu à l'intérieur. Le nom de la
+        base et le nombre d'articles ne sont plus écrits sur la carte&nbsp;: ils apparaissent au survol,
+        par <code>attachTip</code>. Quand une base n'a pas de logo disponible — OpenCitations —, la même
+        coquille accueille son nom en texte (<code>.idx-chip-text</code>).
+      </p>
+      <p class="note">
+        <strong>La plaque reste claire dans les deux thèmes.</strong> C'est ce qui permet de supprimer
+        les filtres <code>invert()</code> appliqués logo par logo, qui faisaient disparaître le noir du
+        logo Web of Science en thème sombre. L'encre du libellé textuel est fixée en dur pour la même
+        raison. Ce gabarit remplace cinq classes — <code>.doaj-btn</code>, <code>.crossref-btn</code>,
+        <code>.openalex-btn</code>, <code>.scopus-btn</code>, <code>.wos-btn</code> — de tailles, de
+        formes et de couleurs différentes, réparties sur cinq blocs de style qui se disputaient à coups
+        de <code>!important</code>.
+      </p>
+
+      <h3 id="ui-fiche">Fiche de revue</h3>
+      <p>
+        Route <code>/&lt;ISSN&gt;</code> ou <code>/openaccess/&lt;identifiant&gt;</code>. Sur cette route,
+        <code>initWithData()</code> s'arrête après avoir chargé le corpus&nbsp;: ni cartes, ni visualisations,
+        ni enrichissement par lot. La fiche se compose de&nbsp;:
+      </p>
+      <ul>
+        <li><strong>Bloc d'informations</strong> — pays, langues, licence, mots-clés, sujets,
+          processus d'évaluation, délai, frais, préservation, identifiants pérennes, droits d'auteur,
+          date d'ouverture. Les frais y sont montrés par la même pastille que sur les cartes&nbsp;; la
+          ligne «&nbsp;Statut Diamant&nbsp;», qui répétait l'information en Oui/Non juste au-dessus, a
+          été retirée.</li>
+        <li><strong>Colonne de droite</strong> (<code>.oa-journal-side</code>) — deux cartes empilées
+          qui suivent le défilement&nbsp;: la <strong>localisation</strong>, Leaflet centré sur le pays de
+          l'éditeur au niveau de zoom 5 avec le même fond de carte que la carte principale&nbsp;; puis
+          <strong>Liens</strong>, qui réunit le site de la revue, sa fiche DOAJ, et sous
+          «&nbsp;Référencée dans&nbsp;» les bases où elle figure. Celles-ci reprennent les pastilles-logos
+          <code>.idx-chip</code> du pied de carte&nbsp;: AJOL en lien direct, OpenAlex vers l'identifiant
+          de source réellement résolu, Crossref en recherche par ISSN, Web of Science vers la
+          <em>Master Journal List</em> avec ses collections, puis OpenCitations et Scopus. Le nom et le
+          détail restent au survol.</li>
+        <li><strong>Publications par an</strong> — courbe des <code>counts_by_year</code> de la source OpenAlex.</li>
+        <li><strong>Présenter la revue</strong> — bouton de synthèse éditoriale. Il récupère jusqu'à cent résumés
+          d'articles récents via OpenAlex, en déduit le domaine et les sous-disciplines dominants, et les envoie
+          à <code>/topics</code>. La génération n'a lieu <strong>qu'une fois</strong>&nbsp;: le texte est conservé
+          et le bouton disparaît ensuite. Il ne réapparaît qu'en cas d'échec, sous la forme
+          «&nbsp;Réessayer&nbsp;».</li>
+        <li><strong>Articles</strong> — liste paginée des publications OpenAlex&nbsp;: titre lié à OpenAlex,
+          année, trois premiers auteurs, langue, sous-discipline, résumé dépliable et lien vers le texte
+          intégral lorsqu'une localisation en libre accès est connue.</li>
+      </ul>
+      <p class="note">
+        <strong>Rendu en deux temps.</strong> Le bloc d'informations est rendu une première fois dès que le corpus
+        est là, puis <strong>re-rendu</strong> quand la source OpenAlex et le cache d'enrichissement arrivent.
+        Sans ce second passage, «&nbsp;Référencée dans&nbsp;» afficherait une liste tronquée des bases.
+      </p>
+      <p class="note">
+        <strong>L'en-tête du catalogue se replie ici.</strong> La fiche ajoute
+        <code>body.on-journal-page</code>, qui masque le grand titre, la ligne
+        «&nbsp;Total&nbsp;: N&nbsp;revues&nbsp;» — vide sur une fiche, le libellé restait seul — et le
+        bouton «&nbsp;Réinitialiser&nbsp;», qui ne remet à zéro aucun filtre sur cette route. L'en-tête
+        passe de 181&nbsp;px à 99&nbsp;px avant le nom de la revue. La colonne de droite porte deux
+        cartes plutôt qu'une seule&nbsp;: la carte de localisation laissait environ 550&nbsp;px de blanc
+        sous elle.
+      </p>
+
+      <h3 id="ui-signets">Signets</h3>
+      <p>
+        Chaque carte porte un bouton signet. La sélection est conservée dans <code>localStorage</code> sous la clé
+        <code>oa_bookmarks_v1</code>, et un bouton flottant affiche le compte courant. La liste s'exporte en CSV,
+        en PDF ou en Markdown.
+      </p>
+
+      <h3 id="ui-feedback">Signalement</h3>
+      <p>
+        Formulaire à quatre types&nbsp;: erreur, suggestion, problème de données, autre. L'envoi ouvre un
+        <code>mailto:</code> pré-rempli dans le client de messagerie. Aucune donnée n'est transmise
+        ni conservée côté serveur.
+      </p>
+    </section>
+
+    <section id="dataviz">
+      <h2>Catalogue des visualisations</h2>
+      <p>
+        Seize graphiques, plus un sur la fiche de revue. Quatorze sont construits avec ECharts, un avec
+        Leaflet (la carte) et un avec D3 (le nuage de mots). Tous sont redessinés à chaque filtrage et à
+        chaque changement de thème.
+      </p>
+
+      <h3 id="viz-socle">Socle commun</h3>
+      <p>
+        <code>updateAllViz(rows)</code> appelle les quatorze fonctions de mise à jour, chacune enveloppée
+        dans <code>safeViz()</code>&nbsp;: une exception dans un graphique est journalisée et n'empêche pas
+        les suivants de se dessiner. Chaque fonction reçoit le tableau des revues <em>déjà filtrées</em> et
+        recalcule ses agrégats à partir de zéro — aucun état n'est conservé d'un rendu à l'autre.
+      </p>
+      <p>
+        <code>ecInit(id)</code> détruit l'instance précédente avant d'en créer une neuve, en passant le thème
+        ECharts «&nbsp;dark&nbsp;» quand la page est en mode sombre. Les couleurs de barre viennent de
+        <code>barColor()</code> et <code>barColorEmphasis()</code>, qui tiennent compte des trois thèmes de
+        l'application.
+      </p>
+      <p>
+        <code>ecToolbox()</code> ajoute la même barre d'outils à tous les graphiques ECharts&nbsp;: image PNG
+        en résolution double, vue des données, export CSV et code d'intégration en cadre. La fonction CSV est
+        propre à chaque graphique et exporte les valeurs agrégées, pas les revues sources.
+      </p>
+      <p>
+        <strong>Une enveloppe autour de <code>echarts.init</code></strong> donne le même habillage à tous
+        les graphiques sans toucher aux quatorze blocs d'options&nbsp;: chaque option passée à
+        <code>setOption</code> reçoit l'infobulle du site — fond, filet, rayon, ombre et flou, relus à
+        chaque appel et donc accordés au thème — et la police <code>Manrope</code>. Un graphique qui fixe
+        lui-même l'une ou l'autre garde la sienne, et un graphique ajouté plus tard en hérite sans rien
+        déclarer.
+      </p>
+      <p class="note">
+        <strong>ECharts n'écrit pas dans la police de la page.</strong> Le rendu se fait dans un
+        <code>canvas</code>&nbsp;: la police ne s'hérite pas du CSS, il faut la déclarer. À défaut, ECharts
+        applique la sienne, <code>Microsoft YaHei</code> — une police chinoise livrée avec Windows. Treize
+        graphiques sur quatorze s'en servaient, et le rendu changeait d'une machine à l'autre selon la
+        substitution retenue par le navigateur.
+      </p>
+      <div class="tw tw--large">
+        <table>
+          <caption>Vue d'ensemble. Les identifiants sont ceux des conteneurs dans <code>index.html</code>.</caption>
+          <thead>
+            <tr><th scope="col">Identifiant</th><th scope="col">Forme</th><th scope="col">Colonne source</th><th scope="col">Filtre au clic</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row"><a href="#viz-map">viz-map</a></th><td>Carte Leaflet à bulles</td><td><code>country</code></td><td><code>country</code></td></tr>
+            <tr><th scope="row"><a href="#viz-added">viz-added</a></th><td>Nuage de points mois et année</td><td><code>addedon</code></td><td><code>addedmonth</code></td></tr>
+            <tr><th scope="row"><a href="#viz-treemap">viz-treemap</a></th><td>Diagramme de Sankey</td><td><code>country</code></td><td>—</td></tr>
+            <tr><th scope="row"><a href="#viz-tags">viz-tags</a></th><td>Nuage de mots D3</td><td><code>keywords</code></td><td><code>tag</code></td></tr>
+            <tr><th scope="row"><a href="#viz-langs">viz-langs</a></th><td>Barres verticales</td><td><code>langs</code></td><td><code>lang</code></td></tr>
+            <tr><th scope="row"><a href="#viz-mono">viz-lang-mono-multi</a></th><td>Anneau</td><td><code>langs</code></td><td><code>monolingual</code></td></tr>
+            <tr><th scope="row"><a href="#viz-license">viz-license</a></th><td>Anneau</td><td><code>license</code></td><td><code>license</code></td></tr>
+            <tr><th scope="row"><a href="#viz-open-since">viz-open-since</a></th><td>Barres verticales</td><td><code>opensince</code></td><td><code>opensince</code></td></tr>
+            <tr><th scope="row"><a href="#viz-review">viz-review-process</a></th><td>Rose de Nightingale</td><td><code>reviewprocess</code></td><td><code>review</code></td></tr>
+            <tr><th scope="row"><a href="#viz-apc-ratio">viz-apc-ratio</a></th><td>Anneau</td><td><code>apc</code></td><td><code>APC_FILTER_VAL</code></td></tr>
+            <tr><th scope="row"><a href="#viz-apc-country">viz-apc-country</a></th><td>Boîtes à moustaches</td><td><code>apcAmount</code></td><td>—</td></tr>
+            <tr><th scope="row"><a href="#viz-apc-pct">viz-apc-pct-country</a></th><td>Barres empilées horizontales</td><td><code>apc</code></td><td>—</td></tr>
+            <tr><th scope="row"><a href="#viz-preservation">viz-preservation</a></th><td>Anneau</td><td><code>preservation</code></td><td><code>preservation</code></td></tr>
+            <tr><th scope="row"><a href="#viz-ids">viz-persistent-ids</a></th><td>Anneau</td><td><code>persistentIds</code></td><td>—</td></tr>
+            <tr><th scope="row"><a href="#viz-weeks">viz-weeks</a></th><td>Aire à bandes</td><td><code>weeks</code></td><td>—</td></tr>
+            <tr><th scope="row"><a href="#viz-graph">viz-indexation-graph</a></th><td>Graphe de forces</td><td>Bases d'indexation</td><td>Filtre de base</td></tr>
+            <tr><th scope="row"><a href="#viz-pubyear">oa-pubyear-chart</a></th><td>Courbe d'aire</td><td>OpenAlex</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="viz-map">Carte des éditeurs</h3>
+      <p>
+        <strong>Choix de représentation.</strong> Des cercles proportionnels plutôt qu'un aplat par pays.
+        Colorier des polygones ferait lire la surface géographique au lieu du nombre de revues&nbsp;:
+        l'Algérie et le Soudan domineraient l'image sans rien publier de plus.
+      </p>
+      <dl class="fiche">
+        <dt>Données</dt>
+        <dd>Comptage des revues par <code>country</code>. Seuls les pays présents dans <code>CENTROIDS</code>
+          sont traçables&nbsp;; les autres sont ignorés.</dd>
+        <dt>Construction</dt>
+        <dd>Fond Jawg, clair ou sombre selon le thème, avec OpenStreetMap en repli. Les bulles sont des
+          <code>circleMarker</code> posés sur des centroïdes codés en dur. Le rayon suit
+          <code>6 + 20 × √(v / max)</code>, soit de 6 à 26&nbsp;px&nbsp;: la racine carrée comprime les écarts
+          extrêmes sans écraser les écarts moyens. Remplissage <code>#2563eb</code> à 90&nbsp;% d'opacité,
+          filet blanc de 1&nbsp;px.</dd>
+        <dt>Lecture</dt>
+        <dd>Plus la bulle est grande, plus le pays compte de revues dans l'ensemble filtré. La vue se recadre
+          automatiquement sur les pays représentés, avec une marge de 30&nbsp;%, puis est contrainte aux
+          limites de l'Afrique.</dd>
+        <dt>Interaction</dt>
+        <dd>Survol&nbsp;: infobulle <em>Pays · N revues</em>. Clic&nbsp;: filtre <code>country</code>.
+          Un bouton bascule la carte en plein écran.</dd>
+      </dl>
+
+      <h3 id="viz-added">Entrées mensuelles au DOAJ</h3>
+      <p>
+        <strong>Choix de représentation.</strong> Une grille mois par année, dite «&nbsp;punch card&nbsp;».
+        Elle donne à lire en même temps la tendance d'une année sur l'autre, sur l'axe vertical, et la
+        saisonnalité des dépôts, sur l'axe horizontal. Une courbe temporelle écraserait la seconde.
+      </p>
+      <dl class="fiche">
+        <dt>Données</dt>
+        <dd><code>addedon</code> réduit à une clé <code>AAAA-MM</code>. Les dates illisibles sont écartées.
+          Les titres sont conservés par mois pour l'infobulle.</dd>
+        <dt>Construction</dt>
+        <dd>Nuage de points, axe X les douze mois abrégés, axe Y les années triées. Diamètre
+          <code>max(8, count / max × 44)</code>. L'année la plus récente passe en ambre
+          (<code>rgba(250,204,21, 0,45 + i × 0,55)</code>), les précédentes en bleu
+          (<code>rgba(37,99,235, 0,20 + i × 0,80)</code>), où <code>i</code> est l'intensité relative.</dd>
+        <dt>Lecture</dt>
+        <dd>Un gros point marque un mois où beaucoup de revues ont rejoint le DOAJ. L'ambre identifie
+          immédiatement l'activité de l'année en cours.</dd>
+        <dt>Interaction</dt>
+        <dd>Survol&nbsp;: les cinq premiers titres ajoutés ce mois-là, puis «&nbsp;+N autres&nbsp;».
+          Clic&nbsp;: filtre <code>addedmonth</code> sur la clé du mois.</dd>
+      </dl>
+
+      <h3 id="viz-treemap">Répartition géographique du corpus</h3>
+      <p>
+        <strong>Choix de représentation.</strong> Un diagramme de Sankey à deux niveaux, grande région
+        africaine puis pays. Le flux montre à la fois le poids de chaque région et sa composition interne,
+        ce qu'une liste de barres ne restitue pas. L'identifiant <code>viz-treemap</code> est hérité d'une
+        version antérieure qui employait une carte proportionnelle.
+      </p>
+      <dl class="fiche">
+        <dt>Données</dt>
+        <dd><code>REGION_MAP</code> associe chaque pays à l'une des quatre grandes régions. Les revues dont
+          le pays n'y figure pas sont écartées.</dd>
+        <dt>Construction</dt>
+        <dd>Les régions sont <strong>triées par nombre de revues décroissant</strong>, et non selon un ordre
+          géographique fixe&nbsp;; les pays d'une même région le sont aussi. Nœuds de 16&nbsp;px, écart de
+          14&nbsp;px, alignement <em>justify</em> et <code>layoutIterations: 0</code> pour que l'ordre calculé
+          soit respecté tel quel. Les liens reprennent la couleur de leur région, à 28&nbsp;% d'opacité en
+          thème clair et 35&nbsp;% en sombre, avec une courbure de 0,5.</dd>
+        <dt>Lecture</dt>
+        <dd>L'épaisseur d'un lien vaut le nombre de revues. Les étiquettes de gauche portent le nom de la
+          région et son total, celles de droite le pays et le sien.</dd>
+        <dt>Interaction</dt>
+        <dd>Survol&nbsp;: met en évidence les flux adjacents et affiche la part du corpus en pourcentage.
+          Aucun filtre au clic.</dd>
+      </dl>
+
+      <h3 id="viz-tags">Nuage de mots-clés</h3>
+      <p>
+        <strong>Choix de représentation.</strong> Le nuage donne une vue instantanée des thématiques
+        dominantes sans imposer d'ordre de lecture. C'est un format d'exploration&nbsp;: on y repère les
+        grands domaines d'un coup d'œil, à défaut de pouvoir comparer deux fréquences voisines.
+      </p>
+      <dl class="fiche">
+        <dt>Données</dt>
+        <dd><code>keywords</code> découpé sur <code>, ; |</code>, mis en minuscules, puis
+          <strong>200 premiers termes</strong> par fréquence.</dd>
+        <dt>Construction</dt>
+        <dd><code>d3.layout.cloud()</code> place les mots en spirale depuis le centre, avec un espacement de
+          2&nbsp;px. Taille par <code>d3.scaleSqrt()</code> de 10 à 42&nbsp;px. Couleur par
+          <code>d3.scaleLinear()</code> de <code>#dbeafe</code>, les termes rares, à <code>#1e3a8a</code>,
+          les plus fréquents. <strong>Rotation bloquée à 0°</strong>&nbsp;: d3-cloud sait incliner les mots,
+          mais cela coûte plus en lisibilité que cela ne gagne en compacité.</dd>
+        <dt>Lecture</dt>
+        <dd>Les mots les plus grands et les plus sombres sont les thématiques les mieux représentées parmi
+          les revues affichées. Le nuage est recalculé à chaque filtrage.</dd>
+        <dt>Interaction</dt>
+        <dd>Clic sur un mot&nbsp;: filtre <code>tag</code>. Un champ de recherche séparé, avec
+          autocomplétion, permet de viser un terme précis sans le chercher des yeux.</dd>
+      </dl>
+
+      <h3 id="viz-langs">Langues de publication</h3>
+      <dl class="fiche">
+        <dt>Données</dt>
+        <dd><code>langs</code> découpé sur <code>, ; |</code>, trente premières langues. Une revue
+          multilingue est comptée dans chacune de ses langues.</dd>
+        <dt>Construction</dt>
+        <dd>Barres verticales triées par fréquence décroissante, sommet arrondi de 4&nbsp;px, étiquettes de
+          l'axe inclinées à 45° et toutes affichées (<code>interval: 0</code>), marge basse de 120&nbsp;px
+          pour les absorber.</dd>
+        <dt>Lecture</dt>
+        <dd>La hauteur d'une barre est le nombre de revues acceptant des manuscrits dans cette langue. Les
+          totaux dépassent donc le nombre de revues.</dd>
+        <dt>Interaction</dt>
+        <dd>Clic&nbsp;: filtre <code>lang</code>.</dd>
+      </dl>
+
+      <h3 id="viz-mono">Régimes linguistiques</h3>
+      <dl class="fiche">
+        <dt>Données</dt>
+        <dd>Monolingue&nbsp;: exactement une langue dans <code>langs</code>. Multilingue&nbsp;: deux ou plus.
+          Une revue sans langue renseignée n'entre dans aucune des deux catégories.</dd>
+        <dt>Construction</dt>
+        <dd>Anneau à deux secteurs, rayons 40&nbsp;% et 70&nbsp;%. Le trou central évite la comparaison
+          d'angles au centre, mauvaise pour l'œil, et laisse la place aux étiquettes.</dd>
+        <dt>Lecture</dt>
+        <dd>Donne le degré d'ouverture linguistique du corpus. Une forte part de multilingues indique des
+          revues accessibles à plusieurs communautés de lecteurs.</dd>
+        <dt>Interaction</dt>
+        <dd>Clic&nbsp;: filtre <code>monolingual</code>, valeur <code>mono</code> ou <code>multi</code>.</dd>
+      </dl>
+
+      <h3 id="viz-license">Licences des revues</h3>
+      <dl class="fiche">
+        <dt>Données</dt>
+        <dd><code>license</code> découpé sur <code>| , ;</code>. <strong>Aucun plafond</strong>&nbsp;: toutes
+          les variantes distinctes sont représentées, d'où une légende souvent longue.</dd>
+        <dt>Construction</dt>
+        <dd>Anneau, rayons 40&nbsp;% et 70&nbsp;%, légende défilante pour absorber les listes longues.</dd>
+        <dt>Lecture</dt>
+        <dd>La répartition entre CC BY, CC BY-NC, CC BY-SA et les autres dit la politique de réutilisation du
+          corpus. CC BY est la plus permissive, y compris pour un usage commercial.</dd>
+        <dt>Interaction</dt>
+        <dd>Clic&nbsp;: filtre <code>license</code>.</dd>
+      </dl>
+
+      <h3 id="viz-open-since">Passage en libre accès</h3>
+      <p>
+        <strong>Choix de représentation.</strong> Des barres en ordre chronologique, et non par fréquence
+        décroissante&nbsp;: ici l'axe du temps porte le sens, un tri par effectif le détruirait.
+      </p>
+      <dl class="fiche">
+        <dt>Données</dt>
+        <dd>Année extraite de <code>opensince</code>, la question DOAJ «&nbsp;<em>When did the journal start
+          to publish all content using an open license?</em>&nbsp;». Valeurs triées par année croissante.</dd>
+        <dt>Construction</dt>
+        <dd>Barres verticales, sommet arrondi, valeur affichée au-dessus de chaque barre, étiquettes d'axe
+          inclinées à 45°.</dd>
+        <dt>Lecture</dt>
+        <dd>Les pics signalent des années charnières, souvent liées à une politique institutionnelle ou à
+          une bascule collective dans une région.</dd>
+        <dt>Interaction</dt>
+        <dd>Clic&nbsp;: filtre <code>opensince</code> sur l'année, convertie en nombre.</dd>
+      </dl>
+
+      <h3 id="viz-review">Processus d'évaluation</h3>
+      <p>
+        <strong>Choix de représentation.</strong> Une rose de Nightingale, ou diagramme en aires polaires.
+        Tous les secteurs ont le <strong>même angle</strong>&nbsp;; seul le rayon varie avec la valeur
+        (<code>roseType: 'area'</code>). C'est plus honnête qu'un camembert, où l'œil compare mal des angles,
+        et cela distingue ce graphique des anneaux voisins.
+      </p>
+      <dl class="fiche">
+        <dt>Données</dt>
+        <dd><code>reviewprocess</code> découpé puis normalisé en <em>titleCase</em>, quatorze premiers
+          processus. Si la colonne est vide pour tout l'ensemble filtré, un message remplace le graphique.</dd>
+        <dt>Construction</dt>
+        <dd>Rayons 18&nbsp;% et 72&nbsp;%, soit un fort contraste entre petites et grandes valeurs. Coins
+          arrondis de 6&nbsp;px, légende défilante, étiquettes reliées par des lignes courtes.</dd>
+        <dt>Lecture</dt>
+        <dd>Plus un secteur s'étend vers l'extérieur, plus le processus est répandu. «&nbsp;Double Blind&nbsp;»
+          et «&nbsp;Blind&nbsp;» dominent habituellement, ce qui dit la préférence du corpus pour l'évaluation
+          anonyme.</dd>
+        <dt>Interaction</dt>
+        <dd>Clic&nbsp;: filtre <code>review</code>.</dd>
+      </dl>
+
+      <h3 id="viz-apc-ratio">Revues avec et sans frais</h3>
+      <dl class="fiche">
+        <dt>Données</dt>
+        <dd><code>isApcNoRow()</code>&nbsp;: la revue est sans frais si <code>apc</code> vaut
+          <code>no</code>, <code>non</code>, <code>0</code> ou est vide. Tout le reste compte comme avec
+          frais.</dd>
+        <dt>Construction</dt>
+        <dd>Anneau à deux secteurs, rayons 40&nbsp;% et 70&nbsp;%, étiquette <code>nom</code> puis
+          <code>pourcentage</code>.</dd>
+        <dt>Lecture</dt>
+        <dd>Part des revues en modèle diamant, sans frais pour l'auteur. Elle est élevée dans le corpus
+          africain, où beaucoup de revues sont portées par des institutions publiques.</dd>
+        <dt>Interaction</dt>
+        <dd>Clic&nbsp;: <strong>ne touche pas</strong> à <code>CURRENTFILTER</code>. Il positionne
+          <code>APC_FILTER_VAL</code> et synchronise le contrôle segmenté du catalogue, de sorte que ce
+          filtre puisse se cumuler avec un filtre issu d'un autre graphique.</dd>
+      </dl>
+
+      <h3 id="viz-apc-country">Coût des APC par pays</h3>
+      <p>
+        <strong>Choix de représentation.</strong> La boîte à moustaches est la seule forme qui montre
+        ensemble la médiane, la dispersion et les extrêmes. Une moyenne par pays masquerait l'hétérogénéité
+        interne, qui est précisément ce qu'on veut voir ici.
+      </p>
+      <dl class="fiche">
+        <dt>Données</dt>
+        <dd>Revues avec frais uniquement. Montant converti en euros via <code>FX_RATES</code>, préchargé au
+          démarrage. Sont écartés&nbsp;: les montants nuls ou négatifs, ceux dépassant 15&nbsp;000&nbsp;€, et
+          les pays comptant moins de cinq revues renseignées.</dd>
+        <dt>Construction</dt>
+        <dd>Statistiques <code>[min, Q1, médiane, Q3, max]</code> par interpolation linéaire sur la série
+          triée. Pays rangés par médiane croissante, du moins cher en bas au plus cher en haut. Teintes ambre
+          en sombre, orange-brun en clair, pour se démarquer des barres bleues.</dd>
+        <dt>Lecture</dt>
+        <dd>La boîte couvre la moitié centrale des valeurs, la ligne intérieure est la médiane, les
+          moustaches donnent les bornes retenues. Une boîte large signale un pays aux tarifs très
+          hétérogènes.</dd>
+        <dt>Interaction</dt>
+        <dd>Aucun filtre au clic. L'infobulle détaille les cinq statistiques et le nombre de revues.</dd>
+      </dl>
+
+      <h3 id="viz-apc-pct">Frais et modèle diamant par pays</h3>
+      <dl class="fiche">
+        <dt>Données</dt>
+        <dd>Pays comptant <strong>au moins dix revues</strong>, triés par total croissant — ce qui place le
+          pays le plus fourni en haut, l'axe des catégories se lisant de bas en haut.</dd>
+        <dt>Construction</dt>
+        <dd>Barres horizontales empilées, deux séries&nbsp;: «&nbsp;Avec APC&nbsp;» en <code>#ef4444</code> et
+          «&nbsp;Diamond OA&nbsp;» en <code>#fbbf24</code>. La hauteur du conteneur est recalculée à chaque
+          rendu, trente pixels par pays, avec un plancher de 420&nbsp;px.</dd>
+        <dt>Lecture</dt>
+        <dd>Malgré son identifiant, le graphique trace des <strong>effectifs</strong>, pas des pourcentages&nbsp;:
+          les nombres sont inscrits dans les segments, et c'est l'infobulle qui calcule les parts.
+          On compare donc d'abord des volumes, et la composition ensuite.</dd>
+        <dt>Interaction</dt>
+        <dd>Aucun filtre au clic. La légende permet de masquer une des deux séries.</dd>
+      </dl>
+
+      <h3 id="viz-preservation">Services de préservation</h3>
+      <dl class="fiche">
+        <dt>Données</dt>
+        <dd><code>preservation</code> et <code>preservationNL</code> — les bibliothèques nationales —
+          concaténées puis découpées sur <code>, ;</code>. Les fragments d'un seul caractère ou de plus de
+          quatre-vingts sont écartés comme bruit. Quatorze premiers services.</dd>
+        <dt>Construction</dt>
+        <dd>Anneau, rayons 38&nbsp;% et 68&nbsp;%, légende défilante.</dd>
+        <dt>Lecture</dt>
+        <dd>Un service très présent, CLOCKSS ou PKP PN par exemple, signale un écosystème de publication
+          mature, soucieux de la pérennité de ce qu'il publie.</dd>
+        <dt>Interaction</dt>
+        <dd>Clic&nbsp;: filtre <code>preservation</code>.</dd>
+      </dl>
+
+      <h3 id="viz-ids">Identifiants pérennes des articles</h3>
+      <p>
+        <strong>Choix de représentation.</strong> Un anneau, avec le taux global au centre. La version
+        précédente dessinait un carré par revue&nbsp;: exact, mais illisible au-delà de quelques centaines
+        d'entrées, et muet sur les proportions.
+      </p>
+      <dl class="fiche">
+        <dt>Données</dt>
+        <dd><code>persistentIds</code> découpé, dédoublonné puis trié&nbsp;: chaque revue reçoit une
+          <em>combinaison</em>, par exemple <code>DOI</code> ou <code>DOI + Handles</code>. Les revues sans
+          rien forment la catégorie «&nbsp;Aucun identifiant&nbsp;».</dd>
+        <dt>Construction</dt>
+        <dd>Anneau, rayons 55&nbsp;% et 76&nbsp;%. Combinaisons triées par effectif décroissant,
+          «&nbsp;Aucun identifiant&nbsp;» toujours renvoyé en fin de série et peint en gris neutre, pour ne
+          pas le confondre avec une combinaison réelle. Deux textes au centre&nbsp;: le pourcentage de revues
+          dotées d'au moins un identifiant, puis le rapport brut.</dd>
+        <dt>Lecture</dt>
+        <dd>Le DOI domine largement. Un taux global faible signalerait un corpus difficile à citer et à
+          retrouver.</dd>
+        <dt>Interaction</dt>
+        <dd>Aucun filtre au clic. Légende défilante, export CSV par la barre d'outils.</dd>
+      </dl>
+
+      <h3 id="viz-weeks">Délais de publication</h3>
+      <p>
+        <strong>Choix de représentation.</strong> Une courbe d'aire plutôt qu'un histogramme&nbsp;: sur
+        cent-quatre valeurs entières, les barres deviennent des traits et la silhouette de la distribution
+        se perd. Quatre <strong>bandes de rapidité</strong> colorées sont peintes en fond, ce qui donne des
+        repères de lecture sans ajouter d'axe.
+      </p>
+      <dl class="fiche">
+        <dt>Données</dt>
+        <dd><code>weeks</code> strictement positif et plafonné à 104, soit deux ans&nbsp;: au-delà, les
+          valeurs sont presque toujours des erreurs de saisie. Arrondi à la semaine entière.</dd>
+        <dt>Construction</dt>
+        <dd>Quatre bandes&nbsp;: <em>Rapide</em> 1 à 8 semaines en vert, <em>Standard</em> 9 à 26 en bleu,
+          <em>Long</em> 27 à 52 en ambre, <em>Très long</em> 53 à 104 en rouge. Chaque bande est une
+          <code>markArea</code> étiquetée. Une catégorie vide est insérée entre deux bandes pour ménager une
+          coupure visible. Les étiquettes de l'axe ne sont affichées qu'aux bornes de bande et aux multiples
+          de huit, sans quoi elles se chevauchent.</dd>
+        <dt>Lecture</dt>
+        <dd>Une ligne pointillée ambre marque la médiane, plus robuste que la moyenne face aux valeurs
+          extrêmes. Sous le graphique, une ligne de texte rappelle médiane, moyenne et effectif retenu. Un
+          pic à gauche signale un corpus qui publie vite.</dd>
+        <dt>Interaction</dt>
+        <dd>Aucun filtre au clic. L'infobulle nomme la bande à laquelle appartient la semaine survolée.</dd>
+      </dl>
+
+      <h3 id="viz-graph">Réseau d'indexation</h3>
+      <p>
+        <strong>Choix de représentation.</strong> Un graphe de forces où chaque revue est reliée aux bases
+        qui l'indexent. C'est la seule forme qui montre les <em>recouvrements</em>&nbsp;: quelles revues sont
+        partagées par Scopus et le Web of Science, lesquelles ne tiennent qu'à une seule base.
+      </p>
+      <dl class="fiche">
+        <dt>Données</dt>
+        <dd>Les six fonctions <code>inAjol</code>, <code>inScopus</code>, <code>inWos</code>,
+          <code>inCrossref</code>, <code>inOpenAlex</code> et <code>inOpenCitations</code>. Une revue reliée
+          à aucune base active est <strong>retirée du graphe</strong>, pour ne pas le remplir de points
+          flottants.</dd>
+        <dt>Construction</dt>
+        <dd>Six nœuds de base de 68 à 72&nbsp;px, portant leur nom à l'intérieur. Les nœuds de revue mesurent
+          9, 13, 17 ou 22&nbsp;px selon qu'ils touchent une, deux, trois bases ou plus, et prennent la
+          couleur de leur pays dans une palette de vingt teintes. Simulation de forces&nbsp;: répulsion 130,
+          gravité 0,12, longueur d'arête de 40 à 220, friction 0,55. Les liens reprennent la couleur de leur
+          source, à 15&nbsp;% d'opacité, courbure 0,25.</dd>
+        <dt>Lecture</dt>
+        <dd>Les revues les plus grosses sont les mieux indexées. Les amas de couleur homogène signalent des
+          pays dont les revues se concentrent sur les mêmes bases.</dd>
+        <dt>Interaction</dt>
+        <dd>Déplacement et zoom libres, de 0,3× à 10×. Le survol isole un nœud et ses voisins, et l'infobulle
+          liste les bases, avec les collections pour le Web of Science. Les cases du dessus ajoutent ou
+          retirent une base&nbsp;: la dernière cochée ne peut pas être décochée. Un clic sur un nœud de base
+          active le filtre correspondant dans le catalogue.</dd>
+      </dl>
+
+      <h3 id="viz-pubyear">Publications par an</h3>
+      <p>Seul graphique hors de la section des visualisations&nbsp;: il figure sur la fiche de revue.</p>
+      <dl class="fiche">
+        <dt>Données</dt>
+        <dd><code>counts_by_year</code> de la source OpenAlex, récupéré à l'ouverture de la fiche. Les années
+          sans valeur sont écartées, les autres triées par ordre croissant. Sans données, le bloc entier est
+          masqué.</dd>
+        <dt>Construction</dt>
+        <dd>Courbe lissée avec aire à 12&nbsp;% d'opacité, points de 5&nbsp;px, couleurs reprises du thème
+          courant. Le graphique est réinitialisé à chaque changement de revue.</dd>
+        <dt>Lecture</dt>
+        <dd>Donne le rythme de publication réel, indépendamment de ce que déclare le DOAJ. Une chute en fin
+          de série traduit souvent un dépôt incomplet pour l'année en cours, pas un arrêt de la revue.</dd>
+        <dt>Interaction</dt>
+        <dd>Infobulle au survol, avec le nombre de publications.</dd>
+      </dl>
+    </section>
+
+    <section id="filtrage">
+      <h2>Filtrage global</h2>
+      <div class="bloc">
+        <div class="bloc__bar"><span class="bloc__label">Contrat</span></div>
+<pre><code>let CURRENTFILTER = null;            // posé par un graphique, la carte ou le catalogue
+CURRENTFILTER = { type: string, value: any };
+
+applyFilter();                       // filtre RAW puis renderAllCards()
+queueScrollToCards();                // fait défiler vers le catalogue</code></pre>
+      </div>
+      <div class="tw tw--large">
+        <table>
+          <thead><tr><th scope="col"><code>type</code></th><th scope="col">Origine</th><th scope="col"><code>value</code></th></tr></thead>
+          <tbody>
+            <tr><th scope="row"><code>country</code></th><td>Carte ou étiquette de pays</td><td>Nom du pays</td></tr>
+            <tr><th scope="row"><code>lang</code></th><td>Graphique des langues</td><td>Nom de la langue</td></tr>
+            <tr><th scope="row"><code>license</code></th><td>Anneau des licences</td><td>Nom de la licence</td></tr>
+            <tr><th scope="row"><code>tag</code></th><td>Nuage de mots-clés</td><td>Mot-clé en minuscules</td></tr>
+            <tr><th scope="row"><code>opensince</code></th><td>Graphique des années d'ouverture</td><td>Année</td></tr>
+            <tr><th scope="row"><code>addedmonth</code></th><td>Grille des entrées mensuelles</td><td><code>AAAA-MM</code></td></tr>
+            <tr><th scope="row"><code>review</code></th><td>Rose des processus</td><td>Nom du processus</td></tr>
+            <tr><th scope="row"><code>monolingual</code></th><td>Anneau mono ou multilingue</td><td><code>mono</code> ou <code>multi</code></td></tr>
+            <tr><th scope="row"><code>preservation</code></th><td>Anneau de préservation</td><td>Nom du service</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Les frais de publication et l'indexation suivent un chemin distinct&nbsp;: ils ne passent pas par
+        <code>CURRENTFILTER</code> mais par <code>APC_FILTER_VAL</code> et par l'ensemble <code>DB_FILTER</code>,
+        afin de pouvoir se cumuler avec un filtre issu d'un graphique.
+      </p>
+    </section>
+
+    <section id="dependances">
+      <h2>Dépendances front-end</h2>
+      <p>Toutes chargées depuis un CDN, sans empaquetage ni compilation.</p>
+      <div class="tw tw--large">
+        <table>
+          <thead><tr><th scope="col">Bibliothèque</th><th scope="col">Version</th><th scope="col">Usage</th><th scope="col">Licence</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">PapaParse</th><td>5.4.1</td><td>Lecture du CSV AJOL et repli CSV du Worker</td><td>MIT</td></tr>
+            <tr><th scope="row">Apache ECharts</th><td>5.4.3</td><td>Quatorze graphiques interactifs</td><td>Apache 2.0</td></tr>
+            <tr><th scope="row">D3 et d3-cloud</th><td>7 et 1</td><td>Nuage de mots-clés</td><td>ISC et MIT</td></tr>
+            <tr><th scope="row">Leaflet</th><td>1.9.4</td><td>Carte des éditeurs et carte de la fiche</td><td>BSD-2</td></tr>
+            <tr><th scope="row">jsPDF</th><td>2.5.1</td><td>Export PDF des recommandations et des signets</td><td>MIT</td></tr>
+            <tr><th scope="row">thinking-orbs</th><td>0.3.2</td><td>Orbe animée de l'écran de chargement et des boutons d'analyse</td><td>MIT</td></tr>
+            <tr><th scope="row">flag-icons</th><td>7.2.3</td><td>Drapeaux en CSS, par code ISO&nbsp;2</td><td>MIT</td></tr>
+            <tr><th scope="row">Google Fonts</th><td>—</td><td>Manrope et Inter</td><td>OFL</td></tr>
+            <tr><th scope="row">Material Symbols</th><td>—</td><td>Icônes</td><td>Apache 2.0</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">
+        <strong>Écran de chargement.</strong> Il ne reste qu'une orbe animée, le titre et la ligne d'état&nbsp;;
+        les barres et les points animés ont été retirés. <code>thinking-orbs</code> est chargé en module depuis
+        un CDN&nbsp;: si l'import échoue, l'orbe est simplement masquée et le texte d'état continue de rendre
+        compte de la progression.
+      </p>
+    </section>
+
+    <section id="worker">
+      <h2>Worker Cloudflare</h2>
+      <p>Fichier&nbsp;: <code>worker/worker.js</code>.</p>
+
+      <h3 id="worker-parser">Lecteur CSV</h3>
+      <p>
+        Implémentation RFC&nbsp;4180 sans dépendance&nbsp;: champs entre guillemets, guillemets échappés,
+        fins de ligne mixtes. Le lecteur est unique mais s'emploie de deux façons.
+      </p>
+      <div class="tw tw--large">
+        <table>
+          <thead><tr><th scope="col">Chemin</th><th scope="col">Entrée</th><th scope="col">Mémoire</th></tr></thead>
+          <tbody>
+            <tr>
+              <th scope="row"><code>parseCSVText</code></th>
+              <td>Corpus africain, pré-filtré à environ 1&nbsp;000 lignes</td>
+              <td>Toutes les lignes en mémoire</td>
+            </tr>
+            <tr>
+              <th scope="row"><code>parseCSVFromStream</code></th>
+              <td>CSV mondial, 23&nbsp;592 lignes sur 52 colonnes</td>
+              <td>Une ligne à la fois, 82&nbsp;Mio au pic</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Le second existe parce que le premier ne passait pas&nbsp;: matérialiser les 23&nbsp;592 lignes du CSV
+        mondial demande environ 795&nbsp;Mio, contre 128&nbsp;Mo disponibles dans un isolat Worker. La construction
+        du cache mondial échouait donc à chaque passage du cron. Le lecteur en flux consomme le corps de la
+        réponse morceau par morceau, n'assemble que les neuf colonnes utiles sur cinquante-deux, et agrège
+        au fil de l'eau.
+      </p>
+
+      <h3 id="worker-kv">Stockage KV</h3>
+      <div class="tw tw--large">
+        <table>
+          <caption>Durée de vie commune&nbsp;: 35 jours (<code>KV_TTL</code>).</caption>
+          <thead><tr><th scope="col">Clé</th><th scope="col">Contenu</th></tr></thead>
+          <tbody>
+            <tr><th scope="row"><code>african_journals</code></th><td>Corpus africain projeté</td></tr>
+            <tr><th scope="row"><code>african_journals_meta</code></th><td><code>cachedAt</code>, <code>count</code>, <code>totalRows</code></td></tr>
+            <tr><th scope="row"><code>enrichment_cache</code></th><td>Crossref, OpenAlex et OpenCitations par ISSN</td></tr>
+            <tr><th scope="row"><code>enrichment_cache_meta</code></th><td>Date, volumes, position de la dernière tranche</td></tr>
+            <tr><th scope="row"><code>enrichment_cursor</code></th><td>Index de reprise du rafraîchissement Crossref</td></tr>
+            <tr><th scope="row"><code>world_journals</code></th><td>Agrégat mondial par pays</td></tr>
+            <tr><th scope="row"><code>world_journals_meta</code></th><td><code>cachedAt</code>, <code>totalRows</code>, <code>countryCount</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="worker-budget">Budget de sous-requêtes</h3>
+      <p>
+        C'est la contrainte qui commande toute l'architecture d'enrichissement. Une invocation de Worker ne
+        peut émettre qu'une cinquantaine de requêtes sortantes&nbsp;; au-delà, chaque <code>fetch</code> lève une
+        exception. Interroger Crossref pour les 956 revues du corpus en demanderait plus de mille.
+      </p>
+      <p>
+        Le cron ne traite donc qu'une <strong>tranche de vingt revues</strong> par passage, repérée par
+        <code>enrichment_cursor</code>, qui avance d'un passage à l'autre et reboucle en fin de corpus.
+        Le reste du cache est entretenu par les navigateurs, via les routes <code>/report-*</code>.
+        Chaque écriture fusionne, de sorte qu'un échec de requête ne dégrade jamais une valeur déjà connue.
+      </p>
+      <p class="note">
+        <strong>Ce que cette règle a coûté par le passé.</strong> Une reconstruction lancée sans cette
+        limite n'avait abouti que pour 37 revues sur 881&nbsp;: les quelque 1&nbsp;500 autres requêtes avaient levé
+        une exception et avaient été enregistrées comme «&nbsp;non indexées&nbsp;». Le filtre Crossref ne retenait
+        alors qu'une quarantaine de revues sur près d'un millier.
+      </p>
+
+      <h3 id="worker-cron">Tâche planifiée</h3>
+      <div class="bloc">
+        <div class="bloc__bar"><span class="bloc__label">wrangler.toml</span></div>
+<pre><code>[triggers]
+crons = ["0 3 * * SUN"]   # chaque dimanche à 03:00 UTC</code></pre>
+      </div>
+      <p>Chaque passage enchaîne trois opérations, dont deux téléchargements du CSV DOAJ&nbsp;:</p>
+      <ol class="proc">
+        <li><strong>Corpus africain</strong> — reconstruction complète depuis le CSV du DOAJ.</li>
+        <li><strong>Tranche d'enrichissement</strong> — vingt revues interrogées auprès de Crossref, fusionnées
+          dans le cache existant.</li>
+        <li><strong>Agrégat mondial</strong> — reconstruction en flux du cache par pays.</li>
+      </ol>
+      <p class="note">
+        <strong>Cloudflare refuse <code>0</code> comme jour de la semaine.</strong> Le champ attend
+        <code>1</code> à <code>7</code>, ou <code>MON</code> à <code>SUN</code>. L'ancienne consigne
+        <code>0 0 * * 0</code> était donc rejetée par l'API à chaque tentative d'enregistrement, et la tâche
+        n'a jamais été planifiée. Le cron est désormais déclaré dans <code>wrangler.toml</code> plutôt que
+        dans l'interface, afin qu'un redéploiement ne puisse plus le perdre.
+      </p>
+      <p>
+        La durée de vie des entrées KV étant de 35 jours, un passage au moins mensuel est indispensable&nbsp;:
+        sans lui, le cache expire et les premiers visiteurs reçoivent un <code>503</code> le temps de la
+        reconstruction.
+      </p>
+
+      <h3 id="worker-coldstart">Démarrage à froid</h3>
+      <p>
+        Quand <code>african_journals</code> est absent, <code>/csv</code> ne bloque pas la requête&nbsp;:
+        il lance la reconstruction en tâche de fond et retourne immédiatement un <code>503</code>.
+        <code>/csv/world</code>, lui, construit de façon synchrone&nbsp;: la première requête est donc lente,
+        mais elle aboutit.
+      </p>
+
+      <h3 id="worker-ia">Synthèse éditoriale</h3>
+      <p>
+        <code>/topics</code> reçoit jusqu'à cent résumés d'articles, le titre de la revue, son grand domaine
+        scientifique et ses sous-disciplines dominantes. Le texte cumulé est tronqué à 8&nbsp;000 caractères
+        côté serveur, indépendamment de ce que le client envoie. Le modèle est
+        <code>@cf/meta/llama-3.1-8b-instruct-fp8</code>, servi par le binding Workers AI&nbsp;: aucune clé d'API
+        externe n'est nécessaire. La consigne impose un texte continu en français, sans liste ni titre, et
+        interdit l'énumération des articles un par un.
+      </p>
+
+      <h3 id="worker-cors">CORS</h3>
+      <p>
+        <code>Access-Control-Allow-Origin: *</code> sur toutes les réponses, méthodes <code>GET</code>,
+        <code>POST</code> et <code>OPTIONS</code>.
+      </p>
+    </section>
+
+    <section id="deploiement">
+      <h2>Déploiement</h2>
+
+      <h3 id="deploiement-worker">Worker</h3>
+      <div class="bloc">
+        <div class="bloc__bar"><span class="bloc__label">Terminal</span></div>
+<pre><code># 1. Espaces de noms KV, une seule fois
+wrangler kv namespace create DOAJ_KV
+wrangler kv namespace create DOAJ_KV --preview
+
+# 2. Secret de rafraîchissement
+wrangler secret put REFRESH_SECRET
+
+# 3. Déploiement — le cron est déclaré dans wrangler.toml
+wrangler deploy
+
+# 4. Pré-remplissage immédiat du cache
+curl "https://doaj-african-cache.ynnonazaline.workers.dev/refresh?secret=&lt;secret&gt;"</code></pre>
+      </div>
+      <p>
+        La sortie de <code>wrangler deploy</code> doit mentionner <code>schedule: 0 3 * * SUN</code>.
+        Si elle signale un déclencheur partiellement mis à jour, la planification a été refusée
+        et seule la logique a été déployée.
+      </p>
+      <p>
+        Le contenu d'une clé KV peut aussi être remplacé directement, ce qui évite la fenêtre de <code>503</code>
+        d'une reconstruction à froid&nbsp;:
+      </p>
+      <div class="bloc">
+        <div class="bloc__bar"><span class="bloc__label">Terminal</span></div>
+<pre><code>wrangler kv key put african_journals --path corpus.json --binding DOAJ_KV --preview false --remote --ttl 3024000</code></pre>
+      </div>
+
+      <h3 id="deploiement-front">Application</h3>
+      <p>
+        Fichier statique unique, compatible avec tout hébergeur. L'adresse du Worker est écrite en dur
+        dans <code>index.html</code>&nbsp;:
+      </p>
+      <div class="bloc">
+        <div class="bloc__bar"><span class="bloc__label">index.html</span></div>
+<pre><code>const REMOTECSVURL   = "https://doaj-african-cache.ynnonazaline.workers.dev/csv";
+const ENRICHMENT_URL = "https://doaj-african-cache.ynnonazaline.workers.dev/enrichment";</code></pre>
+      </div>
+      <p>
+        La route <code>/&lt;ISSN&gt;</code> suppose que l'hébergeur renvoie <code>index.html</code> pour toute
+        adresse inconnue. Sans cette réécriture, les fiches de revues retournent une erreur 404.
+      </p>
+    </section>
+
+    <section id="resilience">
+      <h2>Résilience du chargement</h2>
+
+      <h3 id="resilience-overlay">Écran de chargement</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th scope="col">Temps écoulé</th><th scope="col">Message</th></tr></thead>
+          <tbody>
+            <tr><th scope="row" class="etat">0 s</th><td>Connexion au serveur DOAJ…</td></tr>
+            <tr><th scope="row" class="etat">5 s</th><td>Récupération des données…</td></tr>
+            <tr><th scope="row" class="etat">20 s</th><td>Traitement des revues africaines…</td></tr>
+            <tr><th scope="row" class="etat">40 s</th><td>Démarrage à froid du serveur — veuillez patienter…</td></tr>
+            <tr><th scope="row" class="etat">60 s</th><td>Presque prêt… encore quelques instants…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="resilience-timeout">Délai de 90 secondes</h3>
+      <div class="bloc">
+        <div class="bloc__bar"><span class="bloc__label">index.html</span></div>
+<pre><code>const controller = new AbortController();
+const fetchTimer = setTimeout(() =&gt; controller.abort(), 90000);
+try {
+  resp = await fetch(REMOTECSVURL, { cache: "no-store", signal: controller.signal });
+} finally {
+  clearTimeout(fetchTimer);
+}</code></pre>
+      </div>
+
+      <h3 id="resilience-modale">Modale de secours</h3>
+      <p>Affichée uniquement si le chargement automatique échoue. Elle propose trois issues&nbsp;:</p>
+      <ol class="proc">
+        <li><strong>Réessayer</strong> — relance le chargement avec un nouvel écran d'attente.</li>
+        <li><strong>Télécharger le CSV du DOAJ</strong> — lien direct vers la source.</li>
+        <li><strong>Dépôt manuel</strong> — le CSV téléchargé est lu localement par PapaParse, et l'application
+          démarre normalement.</li>
+      </ol>
+    </section>
+
+    <section id="attention">
+      <h2>Points d'attention</h2>
+      <p>
+        Ce qui suit n'est pas une liste de bogues ouverts, mais les contraintes qu'il faut connaître
+        avant de modifier le code, et les écarts résiduels entre ce que l'application attend et ce que
+        les sources fournissent.
+      </p>
+      <div class="tw tw--large">
+        <table>
+          <caption>État au 13 novembre 2026.</caption>
+          <thead><tr><th scope="col">Sujet</th><th scope="col">Détail</th></tr></thead>
+          <tbody>
+            <tr>
+              <th scope="row">Mémoire du Worker</th>
+              <td>Toute évolution du lecteur CSV doit préserver le chemin en flux&nbsp;: charger le CSV mondial
+                en une seule chaîne dépasse les 128&nbsp;Mo de l'isolat et fait échouer la tâche planifiée
+                silencieusement, puisque l'erreur est capturée et seulement journalisée.</td>
+            </tr>
+            <tr>
+              <th scope="row">Corpus en cache sept jours</th>
+              <td><code>CACHE_MAX_AGE_MS</code> vaut sept jours. Un visiteur régulier conserve donc l'ancien
+                corpus jusqu'à une semaine après une mise à jour. Pour tester une modification de données,
+                vider <code>CacheStorage</code> avant de recharger.</td>
+            </tr>
+            <tr>
+              <th scope="row">Cache navigateur de l'enrichissement</th>
+              <td><code>/enrichment</code> est servi avec une validité de vingt-quatre heures&nbsp;: après une
+                reconstruction côté serveur, un visiteur récent peut conserver l'ancienne version une journée.
+                Le phénomène se résorbe seul.</td>
+            </tr>
+            <tr>
+              <th scope="row">Conjonction des filtres</th>
+              <td>Les interrupteurs d'indexation se combinent en «&nbsp;et&nbsp;». Activer Scopus et Web of Science
+                n'affiche que les revues présentes dans les deux, ce qui réduit très vite la liste.</td>
+            </tr>
+            <tr>
+              <th scope="row">Écritures KV</th>
+              <td>Les trois routes <code>/report-*</code> écrivent dans KV, en lecture puis écriture.
+                Deux renvois simultanés peuvent en perdre un&nbsp;; c'est sans gravité, le visiteur suivant le
+                renverra. Le renvoi Crossref ne transmet que les écarts, afin de limiter le nombre d'écritures.</td>
+            </tr>
+            <tr>
+              <th scope="row">Crossref et OpenCitations en direct</th>
+              <td>Les revues absentes de ces deux bases produisent des 404 dans la console, et Crossref ne
+                renvoie pas d'en-tête CORS sur ses 404. C'est le comportement normal de ces API&nbsp;:
+                ces erreurs réseau n'interrompent rien.</td>
+            </tr>
+            <tr>
+              <th scope="row">Signalement sans serveur</th>
+              <td>Le formulaire ouvre un <code>mailto:</code>. Rien n'est transmis ni conservé.</td>
+            </tr>
+            <tr>
+              <th scope="row">Deux chartes graphiques</th>
+              <td>Ce document suit une charte monochrome propre, distincte de celle de l'observatoire.
+                Les deux ne se transposent pas&nbsp;: une modification de <code>index.html</code> ne se
+                reporte pas telle quelle ici, ni l'inverse.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="attention-corriges">Défauts corrigés</h3>
+      <p>
+        Les points suivants figuraient dans ce tableau et n'y sont plus. Ils restent listés parce qu'une
+        régression y est toujours possible.
+      </p>
+      <div class="tw tw--large">
+        <table>
+          <thead><tr><th scope="col">Défaut</th><th scope="col">Correction</th></tr></thead>
+          <tbody>
+            <tr>
+              <th scope="row">Six colonnes non transportées</th>
+              <td><code>Publisher</code>, <code>License attributes</code>, <code>URL for license terms</code>,
+                <code>Review process information URL</code>, <code>APC information URL</code> et
+                <code>Number of Article Records</code> étaient lues par l'application mais absentes de
+                <code>NEEDED_COLS</code>&nbsp;: les lignes correspondantes de la fiche restaient vides.
+                Elles sont désormais dans <code>NEEDED_COLS</code>. Toute modification de cette liste
+                impose de reconstruire le KV.</td>
+            </tr>
+            <tr>
+              <th scope="row">Liste Scopus figée</th>
+              <td><code>scopus_issns.js</code> était un export statique sans mécanisme de mise à jour,
+                et un appel résiduel à <code>scopus_active_issns.json</code> échouait en 404 à chaque
+                chargement. Scopus suit maintenant le même mécanisme que Web of Science&nbsp;:
+                <code>scopus_issns.json</code>, régénéré chaque lundi par
+                <code>update_index_lists.py</code>.</td>
+            </tr>
+            <tr>
+              <th scope="row">Critère DOI inopérant</th>
+              <td>Le DOAJ ayant retiré la colonne <code>DOI</code>, l'interrupteur écartait la totalité du
+                corpus. Le critère a été retiré du recommandateur.</td>
+            </tr>
+            <tr>
+              <th scope="row">Thème figé</th>
+              <td>Des <code>!important</code> globaux neutralisaient les classes <code>.dark</code> et
+                <code>.sepia</code>&nbsp;: le bouton de bascule était sans effet visible. Les thèmes
+                fonctionnent.</td>
+            </tr>
+            <tr>
+              <th scope="row">Durée de cache mal nommée</th>
+              <td><code>ONE_MONTH_MS</code> valait sept jours. La constante s'appelle désormais
+                <code>CACHE_MAX_AGE_MS</code>.</td>
+            </tr>
+            <tr>
+              <th scope="row">Double filtrage du catalogue</th>
+              <td>Un filtrage JavaScript et des règles <code>display:none</code> coexistaient&nbsp;: le
+                compteur pouvait annoncer 948&nbsp;revues au-dessus d'une liste vide. Seul le filtrage
+                JavaScript subsiste.</td>
+            </tr>
+            <tr>
+              <th scope="row">Entrées de menu sans cible</th>
+              <td>Sur une revue sans données OpenAlex, trois entrées de la navigation pointaient
+                vers une section en <code>display:none</code>. Le menu masque désormais les entrées dont
+                la cible n'est pas affichée.</td>
+            </tr>
+            <tr>
+              <th scope="row">Pied de carte hétérogène</th>
+              <td>Cinq classes de pastilles aux tailles et aux couleurs différentes, dont deux affichaient
+                un compte chiffré. Un gabarit unique, <code>.idx-chip</code>, et les comptes au survol.</td>
+            </tr>
+            <tr>
+              <th scope="row">Trois affichages pour les frais</th>
+              <td>Un losange doré flottant, un badge rouge et une ligne «&nbsp;Statut Diamant&nbsp;»
+                décrivaient le même champ. Une seule pastille, <code>makeApcChip</code>, à trois états.</td>
+            </tr>
+            <tr>
+              <th scope="row">Police des graphiques</th>
+              <td>Treize graphiques sur quatorze écrivaient en <code>Microsoft YaHei</code>, la police par
+                défaut d'ECharts, et un seul fixait <code>Manrope</code>. L'enveloppe de
+                <code>echarts.init</code> l'impose maintenant à tous. Au passage, <code>Inter</code> a été
+                retirée des deux déclarations qui la citaient&nbsp;: elle n'a jamais été chargée et
+                retombait silencieusement sur Manrope.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer class="footer footer--doc">
+  <div class="footer__inner">
+    <div class="credits">
+      <div>
+        <h2>Observatoire</h2>
+        <ul>
+          <li>Awuvé Innocent Azilan — <a href="https://azilan.me" target="_blank" rel="noopener noreferrer">azilan.me&nbsp;↗</a></li>
+          <li>Application sous licence <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer">CC BY-NC 4.0&nbsp;↗</a></li>
+          <li>Documentation technique, V5.2, novembre 2026</li>
+        </ul>
+      </div>
+      <div>
+        <h2>Sources de données</h2>
+        <ul>
+          <li><a href="https://doaj.org" target="_blank" rel="noopener noreferrer">DOAJ&nbsp;↗</a> — Directory of Open Access Journals</li>
+          <li><a href="https://www.ajol.info" target="_blank" rel="noopener noreferrer">AJOL&nbsp;↗</a> — index issu de Alonso-Álvarez, P. (2025), <em>AJOL dataset</em>, Zenodo, <a href="https://doi.org/10.5281/zenodo.15383374" target="_blank" rel="noopener noreferrer">10.5281/zenodo.15383374&nbsp;↗</a></li>
+          <li><a href="https://www.crossref.org" target="_blank" rel="noopener noreferrer">Crossref&nbsp;↗</a>, <a href="https://openalex.org" target="_blank" rel="noopener noreferrer">OpenAlex&nbsp;↗</a>, <a href="https://opencitations.net" target="_blank" rel="noopener noreferrer">OpenCitations&nbsp;↗</a></li>
+          <li><a href="https://github.com/wosaide/wosaide-journal-lists" target="_blank" rel="noopener noreferrer">Web of Science&nbsp;↗</a> — listes AHCI, ESCI, SCIE, SSCI</li>
+          <li><a href="https://www.scopus.com" target="_blank" rel="noopener noreferrer">Scopus&nbsp;↗</a>, <a href="https://openexchangerates.org" target="_blank" rel="noopener noreferrer">Open Exchange Rates&nbsp;↗</a></li>
+          <li><a href="https://www.jawg.io" target="_blank" rel="noopener noreferrer">Jawg Maps&nbsp;↗</a>, <a href="https://www.openstreetmap.org" target="_blank" rel="noopener noreferrer">OpenStreetMap&nbsp;↗</a> sous licence ODbL</li>
+        </ul>
+      </div>
+      <div>
+        <h2>Bibliothèques</h2>
+        <ul>
+          <li><a href="https://echarts.apache.org" target="_blank" rel="noopener noreferrer">Apache ECharts&nbsp;↗</a>, <a href="https://leafletjs.com" target="_blank" rel="noopener noreferrer">Leaflet&nbsp;↗</a></li>
+          <li><a href="https://www.papaparse.com" target="_blank" rel="noopener noreferrer">PapaParse&nbsp;↗</a>, <a href="https://d3js.org" target="_blank" rel="noopener noreferrer">D3&nbsp;↗</a></li>
+          <li><a href="https://github.com/parallax/jsPDF" target="_blank" rel="noopener noreferrer">jsPDF&nbsp;↗</a>, <a href="https://github.com/lipis/flag-icons" target="_blank" rel="noopener noreferrer">flag-icons&nbsp;↗</a></li>
+          <li><a href="https://developers.cloudflare.com/workers-ai/" target="_blank" rel="noopener noreferrer">Workers AI&nbsp;↗</a> — Llama 3.1 8B</li>
+        </ul>
+      </div>
+    </div>
+    <p>
+      Documentation technique de l'Observatoire des revues africaines en libre accès.
+      Les volumes cités, 956 revues africaines et 23&nbsp;592 revues dans le monde, sont ceux relevés
+      le 13 novembre 2026 et évoluent à chaque passage de la tâche planifiée.
+    </p>
+  </div>
+</footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- Thème : clé partagée, cycle clair, sombre, sépia ---------- */
+  var THEMES = ['light', 'dark', 'sepia'];
+  var LABELS = { light: 'clair', dark: 'sombre', sepia: 'sépia' };
+  var root = document.documentElement;
+  var themeBtn = document.getElementById('themeBtn');
+
+  function applyTheme(theme) {
+    if (THEMES.indexOf(theme) === -1) theme = 'light';
+    root.setAttribute('data-theme', theme);
+    if (themeBtn) themeBtn.setAttribute('title', 'Thème ' + LABELS[theme]);
+    try { localStorage.setItem('theme-new', theme); } catch (e) {}
+  }
+
+  var saved = null;
+  try { saved = localStorage.getItem('theme-new'); } catch (e) {}
+  if (!saved) {
+    saved = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  }
+  applyTheme(saved);
+
+  if (themeBtn) {
+    themeBtn.addEventListener('click', function () {
+      var current = root.getAttribute('data-theme') || 'light';
+      applyTheme(THEMES[(THEMES.indexOf(current) + 1) % THEMES.length]);
+    });
+  }
+
+  /* ---------- Impression : la feuille @media print suffit ---------- */
+  var printBtn = document.getElementById('printBtn');
+  if (printBtn) printBtn.addEventListener('click', function () { window.print(); });
+
+  /* ---------- Barre de progression de lecture ---------- */
+  var progress = document.getElementById('progress');
+  var ticking = false;
+  function updateProgress() {
+    ticking = false;
+    if (!progress) return;
+    var h = document.documentElement.scrollHeight - window.innerHeight;
+    progress.style.width = (h > 0 ? (window.scrollY / h) * 100 : 0) + '%';
+  }
+  window.addEventListener('scroll', function () {
+    if (!ticking) { ticking = true; requestAnimationFrame(updateProgress); }
+  }, { passive: true });
+  updateProgress();
+
+  /* ---------- Sommaire : suivi de la section lue ---------- */
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a[href^="#"]'));
+  var targets = links
+    .map(function (a) { return document.getElementById(a.getAttribute('href').slice(1)); })
+    .filter(Boolean);
+
+  function markActive() {
+    var active = null;
+    for (var i = 0; i < targets.length; i++) {
+      if (targets[i].getBoundingClientRect().top < 140) active = targets[i];
+    }
+    links.forEach(function (a) {
+      var on = !!active && a.getAttribute('href') === '#' + active.id;
+      a.classList.toggle('active', on);
+      if (on) a.setAttribute('aria-current', 'true');
+      else a.removeAttribute('aria-current');
+    });
+  }
+  if (targets.length) {
+    window.addEventListener('scroll', markActive, { passive: true });
+    markActive();
+  }
+
+  /* ---------- Message passager ---------- */
+  var toast = document.getElementById('toast');
+  var toastTimer;
+  function say(message) {
+    if (!toast) return;
+    toast.textContent = message;
+    toast.classList.add('visible');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      toast.classList.remove('visible');
+      setTimeout(function () { toast.textContent = ''; }, 400);
+    }, 1600);
+  }
+
+  /* ---------- Boutons copier, injectés sur les blocs de code ---------- */
+  var COPY_ICON =
+    '<svg class="ico-cp" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
+    '<svg class="ico-ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<polyline points="20 6 9 17 4 12"/></svg>';
+
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+    return new Promise(function (resolve, reject) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'absolute';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      ok ? resolve() : reject(new Error('copy'));
+    });
+  }
+
+  document.querySelectorAll('.bloc').forEach(function (bloc) {
+    var pre = bloc.querySelector('pre');
+    var bar = bloc.querySelector('.bloc__bar');
+    if (!pre || !bar) return;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'cp';
+    btn.title = 'Copier';
+    btn.setAttribute('aria-label', 'Copier ce bloc');
+    btn.innerHTML = COPY_ICON;
+    btn.addEventListener('click', function () {
+      copyText(pre.innerText).then(function () {
+        btn.setAttribute('data-ok', '');
+        btn.title = 'Copié';
+        say('Copié');
+        setTimeout(function () { btn.removeAttribute('data-ok'); btn.title = 'Copier'; }, 1600);
+      }).catch(function () { say('Copie impossible'); });
+    });
+    bar.appendChild(btn);
+  });
+
+  /* ---------- Recherche plein texte dans la page ----------
+     L'interface est injectée ici, pas écrite dans le HTML : sans script, le
+     sommaire reste tel quel plutôt que d'afficher un champ inerte. */
+  var toc = document.querySelector('.toc');
+  var tocTitre = toc && toc.querySelector('.toc__title');
+  if (toc && tocTitre) {
+
+    // Repli des diacritiques, caractère par caractère : la chaîne repliée garde
+    // exactement la longueur de l'originale, donc les positions restent valides
+    // pour découper un extrait.
+    function fold(str) {
+      var out = '';
+      for (var i = 0; i < str.length; i++) {
+        var d = str[i].normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        out += (d.charAt(0) || str[i]).toLowerCase();
+      }
+      return out;
+    }
+
+    function escape(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // ---- Index : un enregistrement par bloc de texte de <main> ----
+    var SELECTEUR = 'h2, h3, h4, p, li, dt, dd, tr, caption, pre';
+
+    // Une ligne de tableau se lit cellule par cellule, séparées ; sans cela
+    // textContent accole « Anneau » et « license » en « Anneaulicense ».
+    function texteDe(bloc) {
+      if (bloc.tagName === 'TR') {
+        return [].map.call(bloc.cells, function (c) {
+          return c.textContent.replace(/\s+/g, ' ').trim();
+        }).filter(Boolean).join(' · ');
+      }
+      return bloc.textContent.replace(/\s+/g, ' ').trim();
+    }
+    var index = [];
+    var compteurId = 0;
+
+    document.querySelectorAll('main section[id]').forEach(function (section) {
+      var titreSection = section.querySelector('h2');
+      titreSection = titreSection ? titreSection.textContent.trim() : section.id;
+      var sousTitre = '';
+
+      section.querySelectorAll(SELECTEUR).forEach(function (bloc) {
+        // Un bloc contenu dans un autre bloc indexé ferait doublon.
+        if (bloc.parentElement.closest(SELECTEUR)) return;
+        var texte = texteDe(bloc);
+        if (texte.length < 3) return;
+
+        var estTitre = /^H[234]$/.test(bloc.tagName);
+        if (estTitre) sousTitre = texte;
+        if (!bloc.id) bloc.id = 'bloc-' + (++compteurId);
+
+        index.push({
+          el: bloc,
+          id: bloc.id,
+          texte: texte,
+          replie: fold(texte),
+          titre: estTitre ? titreSection : (sousTitre || titreSection),
+          titreReplie: fold(estTitre ? titreSection : (sousTitre || titreSection)),
+          estTitre: estTitre
+        });
+      });
+    });
+
+    // ---- Interface ----
+    var form = document.createElement('div');
+    form.className = 'recherche';
+    form.setAttribute('role', 'search');
+    form.innerHTML =
+      '<div class="field">' +
+      '<label class="field__label" for="q">Rechercher dans la page</label>' +
+      '<input class="field__input" type="search" id="q" autocomplete="off" spellcheck="false"' +
+      ' aria-describedby="q-compte" placeholder="cron, Scopus, anneau…">' +
+      '</div>' +
+      '<p class="recherche__compte" id="q-compte" role="status" aria-live="polite"></p>' +
+      '<p class="recherche__aide"><kbd>/</kbd> pour chercher · <kbd>Échap</kbd> pour quitter</p>';
+    toc.insertBefore(form, tocTitre);
+
+    var champ = form.querySelector('#q');
+    var compte = form.querySelector('#q-compte');
+    var liste = document.createElement('ol');
+    liste.className = 'resultats';
+    liste.hidden = true;
+    form.appendChild(liste);
+
+    // ---- Recherche ----
+    function chercher(requete) {
+      var termes = fold(requete).split(/\s+/).filter(function (t) { return t.length > 1; });
+      if (!termes.length) return [];
+      var trouves = [];
+
+      index.forEach(function (bloc) {
+        var positions = [];
+        for (var i = 0; i < termes.length; i++) {
+          var p = bloc.replie.indexOf(termes[i]);
+          if (p === -1) return;            // tous les termes sont exigés
+          positions.push([p, termes[i].length]);
+        }
+        var score = positions.length;
+        if (bloc.estTitre) score += 6;
+        termes.forEach(function (t) { if (bloc.titreReplie.indexOf(t) !== -1) score += 3; });
+        trouves.push({ bloc: bloc, score: score, positions: positions });
+      });
+
+      trouves.sort(function (a, b) { return b.score - a.score; });
+      return trouves.slice(0, 40);
+    }
+
+    // Extrait centré sur la première occurrence, termes mis en évidence.
+    function extrait(bloc, positions) {
+      var debut = Math.max(0, Math.min.apply(null, positions.map(function (p) { return p[0]; })) - 45);
+      var fin = Math.min(bloc.texte.length, debut + 190);
+      var brut = bloc.texte.slice(debut, fin);
+      var decale = positions
+        .map(function (p) { return [p[0] - debut, p[1]]; })
+        .filter(function (p) { return p[0] >= 0 && p[0] + p[1] <= brut.length; })
+        .sort(function (a, b) { return a[0] - b[0]; });
+
+      var html = '', curseur = 0;
+      decale.forEach(function (p) {
+        if (p[0] < curseur) return;        // chevauchement : on garde la première
+        html += escape(brut.slice(curseur, p[0]));
+        html += '<mark>' + escape(brut.slice(p[0], p[0] + p[1])) + '</mark>';
+        curseur = p[0] + p[1];
+      });
+      html += escape(brut.slice(curseur));
+      return (debut > 0 ? '…' : '') + html + (fin < bloc.texte.length ? '…' : '');
+    }
+
+    function afficher(requete) {
+      var q = requete.trim();
+      liste.innerHTML = '';
+
+      if (q.length < 2) {
+        liste.hidden = true;
+        toc.classList.remove('toc--recherche');
+        compte.textContent = '';
+        return;
+      }
+
+      var trouves = chercher(q);
+      liste.hidden = false;
+      toc.classList.add('toc--recherche');
+
+      if (!trouves.length) {
+        compte.textContent = 'Aucun résultat pour « ' + q + ' ».';
+        return;
+      }
+      compte.textContent = trouves.length === 40
+        ? '40 premiers résultats.'
+        : trouves.length + (trouves.length > 1 ? ' résultats.' : ' résultat.');
+
+      var frag = document.createDocumentFragment();
+      trouves.forEach(function (r) {
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.href = '#' + r.bloc.id;
+        var redondant = fold(r.bloc.titre) === fold(r.bloc.texte);
+        a.innerHTML = (redondant ? '' : '<span class="resultats__section">' + escape(r.bloc.titre) + '</span>')
+          + extrait(r.bloc, r.positions);
+        a.addEventListener('click', function (e) {
+          e.preventDefault();
+          viser(r.bloc.el);
+        });
+        li.appendChild(a);
+        frag.appendChild(li);
+      });
+      liste.appendChild(frag);
+    }
+
+    var precedent = null;
+    function viser(el) {
+      if (precedent) precedent.classList.remove('cible');
+      var haut = el.getBoundingClientRect().top + window.scrollY - 90;
+      window.scrollTo({ top: haut, behavior: 'smooth' });
+      el.classList.add('cible');
+      precedent = el;
+      setTimeout(function () { el.classList.remove('cible'); }, 2400);
+    }
+
+    var minuteur;
+    champ.addEventListener('input', function () {
+      clearTimeout(minuteur);
+      minuteur = setTimeout(function () { afficher(champ.value); }, 120);
+    });
+
+    // ---- Clavier ----
+    champ.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { champ.value = ''; afficher(''); champ.blur(); return; }
+      if (e.key === 'ArrowDown' || e.key === 'Enter') {
+        var premier = liste.querySelector('a');
+        if (premier) { e.preventDefault(); premier.focus(); }
+      }
+    });
+
+    liste.addEventListener('keydown', function (e) {
+      var liens = [].slice.call(liste.querySelectorAll('a'));
+      var i = liens.indexOf(document.activeElement);
+      if (i === -1) return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); (liens[i + 1] || champ).focus(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); (liens[i - 1] || champ).focus(); }
+      else if (e.key === 'Escape') { e.preventDefault(); champ.focus(); }
+    });
+
+    document.addEventListener('keydown', function (e) {
+      var dans = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+      if ((e.key === '/' && !dans) || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k')) {
+        e.preventDefault();
+        champ.focus();
+        champ.select();
+      }
+    });
+  }
+})();
+</script>
+</body>
+</html>
