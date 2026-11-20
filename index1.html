@@ -498,7 +498,6 @@
       width: 16px; height: 16px;
       object-fit: contain; display: block; flex-shrink: 0;
     }
-    .dbt-logo-scopus { width: 36px; height: auto; }
     .dbt-logo-sym { width: auto; height: auto; font-size: 17px; color: var(--muted); }
     .db-toggle-item.active .dbt-logo-sym { color: var(--accent); }
     .dbt-name {
@@ -1463,7 +1462,7 @@ body{position:relative;z-index:1;background:transparent !important}
           </span>
         </label>
         <label class="db-toggle-item" id="dbt-scopus" title="Afficher uniquement les revues indexées dans Scopus">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/2/26/Scopus_logo.svg" alt="Scopus" class="dbt-logo dbt-logo-scopus">
+          <img src="./scopus.svg" alt="Scopus" class="dbt-logo">
           <span class="dbt-name">Scopus</span>
           <span class="dbt-switch">
             <input type="checkbox" id="toggle-scopus">
@@ -6564,7 +6563,7 @@ ${detail}`;
         scA.target = '_blank'; scA.rel = 'noopener';
         if(typeof attachTip === 'function') attachTip(scA, 'Scopus', ['Cette revue est indexée dans Scopus']);
         const scImg = document.createElement('img');
-        scImg.src = 'https://upload.wikimedia.org/wikipedia/commons/2/26/Scopus_logo.svg';
+        scImg.src = './scopus.svg';
         scImg.alt = 'Scopus';
         scA.appendChild(scImg);
         footLeft.appendChild(scA);
@@ -7856,7 +7855,7 @@ ${detail}`;
     'Crossref':        function(){ return './crossref.png'; },
     'OpenAlex':        function(){ return 'https://azilan.me/openalex.png'; },
     'OpenCitations':   function(){ return './OpenCitations.png'; },
-    'Scopus':          function(){ return 'https://upload.wikimedia.org/wikipedia/commons/2/26/Scopus_logo.svg'; },
+    'Scopus':          function(){ return './scopus.svg'; },
     'Web of Science':  function(){ return window.WOS_LOGO_URL || null; }
   };
 
@@ -8350,7 +8349,7 @@ html:not(.dark) .apc-eur-badge {
 
   var DB_NODES = [
     { id:'ajol',          name:'AJOL',          color:'#16a34a', size:72, logo:'https://azilan.me/AJOL_logo.png',                                                   logoSize:[56,56]  },
-    { id:'scopus',        name:'Scopus',        color:'#f59e0b', size:72, logo:'https://upload.wikimedia.org/wikipedia/commons/2/26/Scopus_logo.svg',               logoSize:[130,44] },
+    { id:'scopus',        name:'Scopus',        color:'#f59e0b', size:72, logo:'./scopus.svg',                                                              logoSize:[56,56]  },
     { id:'crossref',      name:'Crossref',      color:'#ea580c', size:68, logo:'./crossref.png',                                                               logoSize:[46,46]  },
     { id:'openalex',      name:'OpenAlex',      color:'#7c3aed', size:68, logo:'https://azilan.me/openalex.png',                                                    logoSize:[56,56]  },
     { id:'wos',           name:'Web of Science',color:'#5a2d82', size:72 },
