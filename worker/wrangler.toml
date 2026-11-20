@@ -21,7 +21,10 @@ preview_id = "b911aabc9f76452ead2f1338608949f6"
 [triggers]
 # NB : Cloudflare refuse « 0 » pour le jour de la semaine (1-7 ou MON-SUN).
 # C'est l'erreur de l'ancienne consigne « 0 0 * * 0 », jamais acceptée par l'API.
-crons = ["0 3 * * SUN"]   # chaque dimanche à 03:00 UTC
+crons = ["0 3 * * SUN", "*/15 * * * *"]
+# "0 3 * * SUN"  : corpus DOAJ + tranche Crossref
+# "*/15 * * * *" : tranche du balayage OAI-PMH (8 revues par passage,
+#                  corpus complet en ~30 h, puis boucle).
 
 # Secret for /refresh endpoint — set with:
 #   wrangler secret put REFRESH_SECRET

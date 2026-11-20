@@ -509,6 +509,140 @@ async function putEnrichmentIfChanged(env, existing, next) {
   return true;
 }
 
+/* ────────────────────────────────────────────────────────────────────────────
+ * OAI-PMH — compatibilité de chaque revue
+ *
+ * validator.oaipmh.com n'expose pas d'API publique gratuite (sa « REST API »
+ * est payante, sur demande à l'auteur). La sonde est donc faite ici : un seul
+ * verbe, Identify, sur une poignée d'URL candidates déduites de « Journal URL ».
+ * Un dépôt OAI-PMH valide répond un XML contenant <Identify> et « OAI-PMH ».
+ *
+ * Le balayage tourne sur son propre cron (*\/15) : il a ainsi les ~50
+ * sous-requêtes d'une invocation pour lui seul, sans concurrencer Crossref.
+ * 8 revues par passage, 6 candidates au pire = 48 requêtes. Le corpus complet
+ * (≈ 960 revues) est couvert en une trentaine d'heures, puis recommence.
+ * ────────────────────────────────────────────────────────────────────────── */
+const OAI_KEY        = 'oai_cache';
+const OAI_META_KEY   = 'oai_cache_meta';
+const OAI_CURSOR_KEY = 'oai_cursor';
+const OAI_PER_RUN    = 8;
+const OAI_TIMEOUT_MS = 6000;
+const OAI_MAX_BYTES  = 16384;
+
+/** URL candidates, de la plus probable à la plus spéculative. */
+function oaiCandidates(raw) {
+  const u = String(raw || '').trim().replace(/\/+$/, '');
+  if (!/^https?:\/\//i.test(u)) return [];
+  let root;
+  try { root = new URL(u).origin; } catch { return []; }
+  const out = [u + '/oai'];                                   // OJS : .../index.php/abc/oai
+  const ojs = u.match(/^(.*\/index\.php\/[^/]+)/);            // page profonde d'un OJS
+  if (ojs) out.push(ojs[1] + '/oai');
+  out.push(u + '/oai/request');                               // DSpace / EPrints
+  out.push(root + '/index.php/index/oai');                    // OJS, portail multi-revues
+  out.push(root + '/oai', root + '/oai/request');
+  return [...new Set(out)];
+}
+
+/** Lit au plus `max` octets du corps : une page HTML de 10 Mo ne doit rien coûter. */
+async function readCapped(resp, max) {
+  const reader = resp.body && resp.body.getReader();
+  if (!reader) return '';
+  const dec = new TextDecoder();
+  let out = '', n = 0;
+  try {
+    while (n < max) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      n += value.length;
+      out += dec.decode(value, { stream: true });
+    }
+  } catch { /* flux coupé : on juge sur ce qu'on a */ }
+  try { await reader.cancel(); } catch { /* déjà clos */ }
+  return out;
+}
+
+// Pas de RegExp construite a partir d'une chaine : une classe comme [\s\S]
+// n'y survit pas a l'echappement et se compile en [sS], qui ne matche rien
+// d'utile. Deux indexOf font le meme travail sans ce piege.
+function xmlTag(text, tag) {
+  const open = text.indexOf('<' + tag + '>');
+  if (open === -1) return '';
+  const close = text.indexOf('</' + tag + '>', open);
+  if (close === -1) return '';
+  return text.slice(open + tag.length + 2, close).trim().slice(0, 200);
+}
+
+/** Renvoie la fiche du dépôt si `base` répond un Identify valide, sinon null. */
+async function oaiIdentify(base) {
+  try {
+    const r = await fetch(base + (base.includes('?') ? '&' : '?') + 'verb=Identify', {
+      headers: { 'User-Agent': 'DOAJ-Observatory/1.0 (https://azilan.me)' },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(OAI_TIMEOUT_MS),
+    });
+    if (!r.ok) return null;
+    const body = await readCapped(r, OAI_MAX_BYTES);
+    if (!/<Identify[\s>]/.test(body) || !/OAI-PMH/.test(body)) return null;
+    return {
+      url:         base,
+      name:        xmlTag(body, 'repositoryName'),
+      granularity: xmlTag(body, 'granularity'),
+      earliest:    xmlTag(body, 'earliestDatestamp'),
+    };
+  } catch { return null; }
+}
+
+/**
+ * Une tranche du corpus par passage. Le curseur tourne ; un échec réseau
+ * n'efface jamais un dépôt déjà trouvé (on ne remplace que par du positif,
+ * ou par `false` quand toutes les candidates ont répondu sans erreur fatale).
+ */
+async function sweepOai(env) {
+  const raw = await env.DOAJ_KV.get(CACHE_KEY);
+  if (!raw) throw new Error('African journals KV not found — run /refresh first');
+  const journals = JSON.parse(raw);
+  if (!journals.length) return { journals: 0, refreshed: 0 };
+
+  const prevRaw = await env.DOAJ_KV.get(OAI_KEY);
+  const prev = prevRaw ? JSON.parse(prevRaw) : {};
+  const next = { ...prev };
+
+  const cursorRaw = await env.DOAJ_KV.get(OAI_CURSOR_KEY);
+  const start = Math.max(0, parseInt(cursorRaw, 10) || 0) % journals.length;
+  const slice = journals.slice(start, start + OAI_PER_RUN);
+
+  // Les revues de la tranche en parallèle, leurs candidates en série : le
+  // budget rare est le nombre de sous-requêtes (48 au pire, inchangé), pas le
+  // temps. En série, la tranche pouvait dépasser la durée d'une invocation.
+  await Promise.all(slice.map(async j => {
+    const keys = [normIssnW(j['EISSN'] || ''), normIssnW(j['ISSN'] || '')].filter(Boolean);
+    if (!keys.length) return;
+    let found = null;
+    for (const c of oaiCandidates(j['Journal URL'])) {
+      found = await oaiIdentify(c);
+      if (found) break;
+    }
+    for (const k of keys) next[k] = found || false;
+  }));
+
+  const meta = {
+    generated:     new Date().toISOString(),
+    journals:      journals.length,
+    refreshedFrom: start,
+    refreshed:     slice.length,
+    checked:       Object.keys(next).length,
+    found:         Object.values(next).filter(Boolean).length,
+  };
+
+  if (JSON.stringify(next) !== JSON.stringify(prev)) {
+    await env.DOAJ_KV.put(OAI_KEY, JSON.stringify(next), { expirationTtl: KV_TTL });
+  }
+  await env.DOAJ_KV.put(OAI_META_KEY, JSON.stringify(meta), { expirationTtl: KV_TTL });
+  await env.DOAJ_KV.put(OAI_CURSOR_KEY, String((start + slice.length) % journals.length), { expirationTtl: KV_TTL });
+  return meta;
+}
+
 const CORS = {
   "Access-Control-Allow-Origin":  "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -686,6 +820,26 @@ export default {
       });
     }
 
+    // /oai-sweep — une tranche du balayage OAI-PMH, a la demande.
+    // Meme secret que /refresh. Utile pour verifier le balayage sans attendre
+    // le cron, et pour rattraper le corpus plus vite qu'un passage par quart
+    // d'heure (chaque appel avance le curseur de OAI_PER_RUN revues).
+    if (url.pathname === "/oai-sweep") {
+      if (!env.REFRESH_SECRET || url.searchParams.get("secret") !== env.REFRESH_SECRET) {
+        return new Response("Unauthorized", { status: 401 });
+      }
+      try {
+        const meta = await sweepOai(env);
+        return new Response(JSON.stringify({ ok: true, ...meta }), {
+          headers: { ...CORS, "Content-Type": "application/json" }
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), {
+          status: 500, headers: { ...CORS, "Content-Type": "application/json" }
+        });
+      }
+    }
+
     // /enrichment — pre-computed Crossref + OpenAlex counts (loaded once per visitor at startup)
     if (url.pathname === "/enrichment") {
       const cached  = await env.DOAJ_KV.get(ENRICHMENT_KEY);
@@ -696,7 +850,18 @@ export default {
         });
       }
       const meta = metaRaw ? JSON.parse(metaRaw) : {};
-      return new Response(cached, {
+
+      // Le balayage OAI-PMH vit dans sa propre clé KV (son cron écrit toutes les
+      // 15 min : le mêler à enrichment_cache écraserait les retours /report-*).
+      // On ne le recolle qu'à la lecture, dans une réponse déjà cachée 1 h.
+      let payload = cached;
+      const oaiRaw = await env.DOAJ_KV.get(OAI_KEY);
+      if (oaiRaw) {
+        try { payload = JSON.stringify({ ...JSON.parse(cached), oai: JSON.parse(oaiRaw) }); }
+        catch { /* cache illisible : on sert l'enrichissement seul */ }
+      }
+
+      return new Response(payload, {
         headers: {
           ...CORS,
           "Content-Type":  "application/json; charset=utf-8",
@@ -781,7 +946,18 @@ export default {
   },
 
   // ── Cron handler (weekly — schedule declared in wrangler.toml) ──────────────
-  async scheduled(_event, env, ctx) {
+  async scheduled(event, env, ctx) {
+    // Deux horaires, deux budgets de sous-requêtes distincts. Le balayage
+    // OAI-PMH consomme jusqu'à 48 requêtes : il ne peut pas partager
+    // l'invocation du dimanche, qui télécharge déjà deux fois le CSV du DOAJ.
+    if (event && event.cron && event.cron !== "0 3 * * SUN") {
+      ctx.waitUntil(
+        sweepOai(env)
+          .then(m => console.log(`OAI sweep: ${m.refreshed} journals from ${m.refreshedFrom}, ${m.found} repositories known`))
+          .catch(e => console.error("OAI sweep failed:", e.message))
+      );
+      return;
+    }
     ctx.waitUntil(
       // Step 1: refresh journal list, then Step 2: build enrichment from it
       Promise.all([

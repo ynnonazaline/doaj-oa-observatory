@@ -212,7 +212,9 @@
     .apc-chip:hover{ border-color:var(--accent); }
     .apc-chip-free{
       color:#047857; border-color:rgba(16,185,129,.38); background:rgba(16,185,129,.11);
+      width:34px; padding:0; gap:0;
     }
+    .apc-chip-free .material-symbols-outlined{ font-size:18px; }
     .apc-chip-free:hover{ border-color:rgba(16,185,129,.75); }
     .apc-chip-unknown{ color:var(--muted); font-weight:700; }
     .dark .apc-chip-free, html.dark .apc-chip-free{
@@ -496,9 +498,9 @@
       width: 16px; height: 16px;
       object-fit: contain; display: block; flex-shrink: 0;
     }
-    .dbt-logo-crossref { height: 12px; width: auto; max-width: 50px; }
     .dbt-logo-scopus { width: 36px; height: auto; }
-    html.dark .dbt-logo-crossref { filter: invert(1) hue-rotate(180deg) brightness(1.4); }
+    .dbt-logo-sym { width: auto; height: auto; font-size: 17px; color: var(--muted); }
+    .db-toggle-item.active .dbt-logo-sym { color: var(--accent); }
     .dbt-name {
       font-size: 12px; font-weight: 700; color: var(--text);
     }
@@ -593,7 +595,8 @@ button:hover, .btn:hover, a.btn:hover, input[type="button"]:hover, input[type="s
 
 
 
-html { scroll-behavior: smooth; }
+/* Pas de scroll-behavior global : la navigation passe behavior:'smooth'
+   explicitement a scrollTo, les autres defilements restent natifs. */
 main.container{
   padding-top: 24px !important;
   padding-bottom: 42px !important;
@@ -997,6 +1000,7 @@ body{position:relative;z-index:1;background:transparent !important}
 
       
       #viz-map { height: 340px !important; }
+      #viz-treemap { height: 880px !important; }
       #btn-map-fullscreen {
         padding: 6px 10px !important;
         font-size: 12px !important;
@@ -1273,7 +1277,7 @@ body{position:relative;z-index:1;background:transparent !important}
       <div class="card" style="grid-column:1 / -1;">
         <div class="section-title"><span class="section-icon" style="color:#10b981;background:rgba(16,185,129,.13)"><span class="material-symbols-outlined">account_tree</span></span>Répartition géographique du corpus</div>
         <div class="subtle" style="margin-bottom:8px;">Flux des revues de chaque grande région africaine vers ses pays. L'épaisseur reflète le nombre de revues. <strong>Survolez</strong> une région ou un pays pour mettre ses flux en évidence.</div>
-        <div id="viz-treemap" style="height:820px;border-radius:14px;overflow:hidden;"></div>
+        <div id="viz-treemap" style="height:1000px;border-radius:14px;overflow:hidden;"></div>
       </div>
 
       <div class="card" style="grid-column:1 / -1;">
@@ -1435,7 +1439,7 @@ body{position:relative;z-index:1;background:transparent !important}
           </span>
         </label>
         <label class="db-toggle-item" id="dbt-crossref" title="Afficher uniquement les revues indexées dans Crossref">
-          <img src="./crossref-logo.jpg" alt="Crossref" class="dbt-logo dbt-logo-crossref">
+          <img src="./crossref.png" alt="Crossref" class="dbt-logo dbt-logo-crossref">
           <span class="dbt-name">Crossref</span>
           <span class="dbt-switch">
             <input type="checkbox" id="toggle-crossref">
@@ -1447,6 +1451,14 @@ body{position:relative;z-index:1;background:transparent !important}
           <span class="dbt-name">OpenAlex</span>
           <span class="dbt-switch">
             <input type="checkbox" id="toggle-openalex">
+            <span class="dbt-slider"></span>
+          </span>
+        </label>
+        <label class="db-toggle-item" id="dbt-opencitations" title="Afficher uniquement les revues dont les références sont ouvertes dans OpenCitations">
+          <img src="./OpenCitations.png" alt="OpenCitations" class="dbt-logo">
+          <span class="dbt-name">OpenCitations</span>
+          <span class="dbt-switch">
+            <input type="checkbox" id="toggle-opencitations">
             <span class="dbt-slider"></span>
           </span>
         </label>
@@ -1463,6 +1475,14 @@ body{position:relative;z-index:1;background:transparent !important}
           <span class="dbt-name">Web of Science</span>
           <span class="dbt-switch">
             <input type="checkbox" id="toggle-wos">
+            <span class="dbt-slider"></span>
+          </span>
+        </label>
+        <label class="db-toggle-item" id="dbt-oai" title="Afficher uniquement les revues dont la plateforme expose un entrepôt OAI-PMH moissonnable">
+          <span class="material-symbols-outlined dbt-logo dbt-logo-sym" aria-hidden="true">sync_alt</span>
+          <span class="dbt-name">OAI-PMH</span>
+          <span class="dbt-switch">
+            <input type="checkbox" id="toggle-oai">
             <span class="dbt-slider"></span>
           </span>
         </label>
@@ -1748,9 +1768,17 @@ body{position:relative;z-index:1;background:transparent !important}
   function ecInit(id){
     const el = document.getElementById(id);
     if (!el) return null;
-    if (ECHARTS_MAP[id]) { ECHARTS_MAP[id].dispose(); delete ECHARTS_MAP[id]; }
     const theme = isDark() ? 'dark' : null;
+    const existing = ECHARTS_MAP[id];
+    // Le theme ECharts est fige a la creation : on ne recree que s'il a change.
+    if (existing && !existing.isDisposed() && existing.__ecTheme === theme){
+      existing.clear();
+      existing.setOption({ backgroundColor: 'transparent' });
+      return existing;
+    }
+    if (existing) { existing.dispose(); delete ECHARTS_MAP[id]; }
     const chart = echarts.init(el, theme, {renderer:'canvas'});
+    chart.__ecTheme = theme;
     chart.setOption({ backgroundColor: 'transparent' });
     ECHARTS_MAP[id] = chart;
     return chart;
@@ -1807,8 +1835,33 @@ body{position:relative;z-index:1;background:transparent !important}
     return tb;
   }
 
+  // Redimensionnement groupe des graphiques.
+  // Les graphiques ont une hauteur fixe en CSS : seule la largeur compte.
+  // Sur mobile, la barre d'URL qui se retracte pendant le scroll emet un
+  // resize a hauteur variable et largeur constante — on l'ignore.
+  window.deferChartResize = (function(){
+    const pending = new Set();
+    let timer = 0, appliedWidth = window.innerWidth;
+    return function(chart){
+      if (!chart || chart.isDisposed()) return;
+      if (window.innerWidth === appliedWidth) return;
+      pending.add(chart);
+      clearTimeout(timer);
+      timer = setTimeout(function(){
+        appliedWidth = window.innerWidth;
+        pending.forEach(c => { if (!c.isDisposed()) c.resize(); });
+        pending.clear();
+      }, 150);
+    };
+  })();
+
+  function resizeAllCharts(){
+    Object.values(ECHARTS_MAP).forEach(c=>{ if(c && !c.isDisposed()) c.resize(); });
+  }
+  window.resizeAllCharts = resizeAllCharts;
+
   window.addEventListener('resize', ()=>{
-    Object.values(ECHARTS_MAP).forEach(c=>{ if(c) c.resize(); });
+    Object.values(ECHARTS_MAP).forEach(c=>{ if(c) window.deferChartResize(c); });
   });
 
   const COLS = {
@@ -1866,7 +1919,7 @@ body{position:relative;z-index:1;background:transparent !important}
     return '<span class="fi fi-' + iso + '" style="border-radius:2px;margin-right:5px;vertical-align:-1px;flex-shrink:0;"></span>';
   }
 
-  const DOAJLOGOURL = "https://upload.wikimedia.org/wikipedia/commons/9/9d/DOAJ_logo-black-whitespace.svg";
+  const DOAJLOGOURL = "./doaj.png";
   const AJOLLOGOURL = "https://azilan.me/AJOL_logo.png";
   window.WOS_LOGO_URL = "data:image/svg+xml;base64,PHN2ZyB2ZXJzaW9uPSIxLjIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgdmlld0JveD0iMCAwIDE0MjAgMTU2MyIgd2lkdGg9IjE0MjAiIGhlaWdodD0iMTU2MyI+Cgk8dGl0bGU+bG9nbyAoMTQpLXN2ZzwvdGl0bGU+Cgk8c3R5bGU+CgkJLnMwIHsgZmlsbDogIzE2YWIwMyB9IAoJCS5zMSB7IGZpbGw6ICM1ZTMzYmYgfSAKCQkuczIgeyBmaWxsOiAjMDAwMDAwIH0gCgk8L3N0eWxlPgoJPGcgaWQ9IkxheWVyIj4KCQk8ZyBpZD0iTGF5ZXIiPgoJCQk8cGF0aCBpZD0iTGF5ZXIiIGNsYXNzPSJzMCIgZD0ibTEyMjQuMiA3ODEuNGM3OS40IDk1LjcgMTQ1LjMgMjAzIDE5NSAzMTguOC0yMTQuMiAyMjMuMS00OTAuMSAzODYuMy04MDAuNCA0NjIuNC0zMS40LTQxLjgtNjAuNS04NS41LTg2LjgtMTMxLjEtMzYuNy02My41LTY3LjMtMTI5LjMtOTIuNS0xOTYuNSAzMTMuNy01MyA1ODkuNy0yMTguNSA3ODQuNy00NTMuNnoiLz4KCQkJPHBhdGggaWQ9IkxheWVyIiBjbGFzcz0iczEiIGQ9Im0xNDE5LjIgNDYyLjZjLTQ5LjcgMTE1LjktMTE1LjYgMjIzLjEtMTk1IDMxOC44LTE5NS0yMzUuMS00NzEuMS00MDAuNi03ODQuOS00NTMuNiA0My44LTExOC40IDEwNC0yMjguNSAxNzguNi0zMjcuOCAzMTAuNiA3NiA1ODYuOSAyMzkuNCA4MDEuMyA0NjIuNnoiLz4KCQkJPHBhdGggaWQ9IkxheWVyIiBjbGFzcz0iczIiIGQ9Im0yMjIuMiAxMjUzLjFjLTUzIDAtMTA1LjEtMy4yLTE1Ni40LTkuNC04OS40LTMwNi44LTg2LjEtNjI3LjUgMC4yLTkyNC42IDUxLjItNi4yIDEwMy4zLTkuNCAxNTYuMi05LjQgNzMuOSAwIDE0Ni40IDYuMiAyMTcuMSAxOC4xLTE0LjEgMzguMS0yNi43IDc3LTM3LjMgMTE2LjctNzEgMjY0LjgtNTYuOSA1MzguOCAzNy41IDc5MC41LTcwLjcgMTEuOS0xNDMuMyAxOC4xLTIxNy4zIDE4LjF6Ii8+CgkJPC9nPgoJPC9nPgo8L3N2Zz4=";
   let AJOL_MAP = new Map();
@@ -2196,13 +2249,11 @@ function buildDisciplineKeywordDropdown(rows){
 
     if(free){
       el.classList.add('apc-chip-free');
-      el.innerHTML = '<span class="material-symbols-outlined">diamond</span>'
-                   + '<span class="apc-chip-txt">Sans frais</span>';
+      el.innerHTML = '<span class="material-symbols-outlined">diamond</span>';
+      el.setAttribute('aria-label', 'Cette revue est sans frais de publication');
+      el.title = 'Cette revue est sans frais de publication';
       title = 'Acc\u00e8s diamant';
-      lines = [
-        { label: 'Frais de publication', value: 'Aucun' },
-        "Ni frais pour l'auteur, ni abonnement pour le lecteur."
-      ];
+      lines = ['Cette revue est sans frais de publication.'];
     } else {
       const parsed = (typeof parseApcAmount === 'function') ? parseApcAmount(row) : null;
       const eur = (parsed && typeof toEur === 'function') ? toEur(parsed.amount, parsed.currency) : null;
@@ -2229,7 +2280,11 @@ function buildDisciplineKeywordDropdown(rows){
     const link = (!free && typeof COLS !== 'undefined' && row[COLS.apcInfoUrl])
       ? { href: row[COLS.apcInfoUrl], text: 'Grille tarifaire de la revue' } : null;
 
-    if(typeof attachPopover === 'function'){
+    // Le diamant n'a qu'une phrase a dire : une infobulle au survol suffit.
+    // Les montants gardent leur fiche cliquable (grille tarifaire de la revue).
+    if(free && typeof attachTip === 'function'){
+      attachTip(el, title, lines);
+    } else if(typeof attachPopover === 'function'){
       attachPopover(el, function(){ return { title: title, lines: lines, link: link }; });
     } else if(typeof attachTip === 'function'){
       attachTip(el, title, lines.map(function(l){ return l.label ? l.label + ' : ' + l.value : l; }));
@@ -2714,7 +2769,7 @@ function buildDisciplineKeywordDropdown(rows){
       .filter(([c,vs])=>vs.length >= 5)
       .map(([c,vs])=>({ country:c, stats: boxStats(vs), med: median(vs), count: vs.length }))
       .sort((a,b)=>a.med - b.med);
-    if(!entries.length){ chart.setOption({ title:{ text:'Aucun pays avec au moins 5 revues', left:'center', top:'center', textStyle:{fontSize:13,color:'#888'} } }, true); return; }
+    if(!entries.length){ chart.setOption({ backgroundColor:'transparent', title:{ text:'Aucun pays avec au moins 5 revues', left:'center', top:'center', textStyle:{fontSize:13,color:'#888'} } }, true); return; }
 
     const categories = entries.map(e=>e.country);
     const boxData   = entries.map(e=>e.stats);
@@ -2948,6 +3003,7 @@ function buildDisciplineKeywordDropdown(rows){
       ...entries.map(([n,c])=>JSON.stringify(n)+','+c+','+fmtPct(c)+'%')].join('\n');
 
     chart.setOption({
+      backgroundColor: 'transparent',
       toolbox: ecToolbox(csvFn, 'identifiants-perennes.csv', 'viz-persistent-ids', 'Identifiants pérennes des articles'),
       tooltip: { trigger:'item', formatter: p => p.name + ' : <b>' + p.value + '</b> revue' + (p.value>1?'s':'')
         + ' (' + fmtPct(p.value) + ' %)' },
@@ -3173,6 +3229,15 @@ function buildDisciplineKeywordDropdown(rows){
         }
       });
     }
+    if(d.oai && Object.keys(d.oai).length){
+      window.OAI_MAP = Object.assign(window.OAI_MAP || {}, d.oai);
+    } else {
+      // Balayage pas encore deploye ou vide : laisser l'interrupteur actif
+      // ferait afficher tout le catalogue sous une etiquette « OAI-PMH ».
+      markDbUnavailable('oai', 'OAI-PMH');
+      var oaiLbl = document.getElementById('dbt-oai');
+      if(oaiLbl) oaiLbl.title = "Filtre OAI-PMH indisponible : le balayage des entrepots n'a pas encore renvoye de resultat.";
+    }
     if(d.opencitations){
       if(!window._OC_RESOLVED) window._OC_RESOLVED = new Map();
       Object.keys(d.opencitations).forEach(function(k){
@@ -3358,7 +3423,7 @@ function buildDisciplineKeywordDropdown(rows){
     }
   };
   document.addEventListener('fullscreenchange', ()=>{
-    setTimeout(()=>{ window.dispatchEvent(new Event('resize')); }, 120);
+    setTimeout(()=>{ if(typeof window.resizeAllCharts === 'function') window.resizeAllCharts(); }, 120);
     const graphEl = document.getElementById("viz-indexation-graph");
     const btn = document.getElementById("btn-indexation-fullscreen");
     if (btn){
@@ -3591,6 +3656,12 @@ function buildDisciplineKeywordDropdown(rows){
     }
     // Liste de reference absente : on n'ecarte aucune revue, mais markDbUnavailable()
     // a deja desactive l'interrupteur, donc ce cas ne doit plus se presenter.
+    if(dbId==='opencitations'){
+      var oc=window._OC_RESOLVED; if(!oc||!oc.size) return true;
+      return typeof window.inOpenCitations === 'function'
+        ? window.inOpenCitations(pi, ei)
+        : (oc.get(nEi)===true||oc.get(nPi)===true);
+    }
     if(dbId==='scopus'){
       var sc=window.SCOPUS_ISSNS; if(!sc||!sc.size) return true;
       return sc.has(nEi)||sc.has(nPi);
@@ -3598,6 +3669,15 @@ function buildDisciplineKeywordDropdown(rows){
     if(dbId==='wos'){
       var w=window.WOS_MAP; if(!w||!w.size) return true;
       return w.has(nEi)||w.has(nPi);
+    }
+    // OAI-PMH : le balayage du Worker avance par tranches. Une revue encore
+    // non sondee (undefined) n'est pas « sans entrepot » : on la garde visible,
+    // comme Crossref le fait pour ses resolutions en attente.
+    if(dbId==='oai'){
+      var om=window.OAI_MAP; if(!om) return true;
+      var a=om[nEi], b=om[nPi];
+      if(a||b) return true;
+      return a===undefined && b===undefined;
     }
     return true;
   }
@@ -3709,9 +3789,9 @@ function buildDisciplineKeywordDropdown(rows){
   window.DB_FILTER = DB_FILTER;
 
   window.setDbFilter = function(dbId, on){
-    var CSS = {ajol:'filter-ajol',crossref:'filter-crossref',openalex:'filter-openalex',scopus:'filter-scopus',wos:'filter-wos'};
-    var CBS = {ajol:'toggle-ajol',crossref:'toggle-crossref',openalex:'toggle-openalex',scopus:'toggle-scopus',wos:'toggle-wos'};
-    var LBS = {ajol:'dbt-ajol',crossref:'dbt-crossref',openalex:'dbt-openalex',scopus:'dbt-scopus',wos:'dbt-wos'};
+    var CSS = {ajol:'filter-ajol',crossref:'filter-crossref',openalex:'filter-openalex',opencitations:'filter-opencitations',scopus:'filter-scopus',wos:'filter-wos'};
+    var CBS = {ajol:'toggle-ajol',crossref:'toggle-crossref',openalex:'toggle-openalex',opencitations:'toggle-opencitations',scopus:'toggle-scopus',wos:'toggle-wos',oai:'toggle-oai'};
+    var LBS = {ajol:'dbt-ajol',crossref:'dbt-crossref',openalex:'dbt-openalex',opencitations:'dbt-opencitations',scopus:'dbt-scopus',wos:'dbt-wos',oai:'dbt-oai'};
     if(on) DB_FILTER.add(dbId); else DB_FILTER.delete(dbId);
     var acg = document.getElementById('all-cards');
     if(acg && CSS[dbId]) acg.classList.toggle(CSS[dbId], on);
@@ -3946,8 +4026,10 @@ function buildDisciplineKeywordDropdown(rows){
     setupDbToggle('toggle-ajol',     'filter-ajol',     'ajol',     'dbt-ajol');
     setupDbToggle('toggle-crossref', 'filter-crossref', 'crossref', 'dbt-crossref');
     setupDbToggle('toggle-openalex', 'filter-openalex', 'openalex', 'dbt-openalex');
+    setupDbToggle('toggle-opencitations', 'filter-opencitations', 'opencitations', 'dbt-opencitations');
     setupDbToggle('toggle-scopus',   'filter-scopus',   'scopus',   'dbt-scopus');
     setupDbToggle('toggle-wos',      'filter-wos',      'wos',      'dbt-wos');
+    setupDbToggle('toggle-oai',      'filter-oai',      'oai',      'dbt-oai');
 
     // Legacy filter buttons (hidden, kept for compat)
     const filterAjolBtn     = document.getElementById('filter-ajol-btn');
@@ -6516,7 +6598,7 @@ ${detail}`;
           crA.target = '_blank'; crA.rel = 'noopener';
           if(typeof attachTip === 'function') attachTip(crA, 'Crossref', [count.toLocaleString('fr-FR') + ' articles index\u00e9s']);
           const logoEl = document.createElement('img');
-          logoEl.src = './crossref-logo.jpg'; logoEl.alt = 'Crossref';
+          logoEl.src = './crossref.png'; logoEl.alt = 'Crossref';
           crA.appendChild(logoEl); footLeft.appendChild(crA);
         });
       } else {
@@ -6832,6 +6914,7 @@ ${detail}`;
 <style id="openalex-works-css">
   .oa-works-title-link{ color:inherit; text-decoration:none; }
   .oa-works-title-link:hover{ color:var(--accent); text-decoration:underline; }
+  .oa-openalex-section{ margin-top:26px; }
   .oa-pubyear-chart-wrap{ display:none; margin:0; padding:12px 16px 4px; border:1px solid var(--card-border); border-radius:14px; background:var(--card); }
   .oa-pubyear-chart-title{ font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:2px; }
   .oa-topics-wrap{ margin:18px 0 16px; flex-shrink:0; }
@@ -6864,78 +6947,107 @@ ${detail}`;
   .oa-topics-collapse-btn:hover{ color:var(--text); }
   .oa-topics-collapse-btn .material-symbols-outlined{ font-size:17px; line-height:1; }
 
-  .oa-works-body{ margin:0 0 20px; padding:4px 16px; border:1px solid var(--card-border); border-radius:14px; background:var(--card); }
-  .oa-work-item{ display:flex; align-items:flex-start; gap:14px; padding:14px 0; border-bottom:1px solid var(--card-border); }
-  .oa-work-item:last-child{ border-bottom:none; }
-  .oa-work-main{ flex:1; min-width:0; }
-  .oa-work-title{ display:block; font-size:14px; font-weight:600; color:var(--accent); text-decoration:none; line-height:1.4; margin-bottom:4px; }
-  .oa-work-title:hover{ text-decoration:underline; }
-  .oa-work-meta{ font-size:12.5px; color:var(--muted); line-height:1.6; }
-  .oa-work-meta a{ color:var(--muted); text-decoration:underline; text-decoration-color:rgba(100,116,139,.35); }
-  .oa-work-meta a:hover{ color:var(--accent); }
-  .oa-work-subfield{
-    display:inline-block; margin-top:6px; padding:2px 9px; border-radius:20px;
-    font-size:11px; font-weight:700; color:var(--accent); background:var(--chip-bg);
+  /* Une notice = une gouttiere d'annee a gauche, le travail a droite.
+     Ni carte, ni bouton plein : le filet de 1px separe, le survol pose un
+     voile discret, les acces sont des pastilles de texte. */
+  .oa-works-body{ margin:0 0 20px; }
+  .oa-work-item{
+    position:relative;
+    display:grid; grid-template-columns:5.25rem minmax(0,1fr);
+    column-gap:1.25rem;
+    padding:1rem 0; border-top:1px solid var(--card-border);
   }
-  .oa-work-abstract-toggle{
-    display:inline-flex; align-items:center; gap:4px; margin-top:8px; padding:0;
-    background:none; border:none; cursor:pointer; color:var(--accent);
-    font-size:12px; font-weight:700; font-family:inherit;
+  .oa-work-item:first-child{ border-top:0; }
+  .oa-work-item::before{
+    content:''; position:absolute; inset:.375rem -.75rem;
+    border-radius:12px; background:var(--chip-bg);
+    opacity:0; transition:opacity .2s; pointer-events:none;
   }
-  .oa-work-abstract-toggle .material-symbols-outlined{ font-size:16px; transition:transform .2s ease; }
-  .oa-work-abstract-toggle.expanded .material-symbols-outlined{ transform:rotate(180deg); }
+  .oa-work-item:hover::before{ opacity:1; }
+  .oa-work-item > *{ position:relative; }
+
+  .oa-work-year{
+    padding-top:.1875rem;
+    font-size:.5625rem; font-weight:700; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--muted);
+    font-variant-numeric:tabular-nums; transition:color .2s;
+  }
+  .oa-work-item:hover .oa-work-year{ color:var(--text); }
+
+  .oa-work-main{ min-width:0; }
+  .oa-work-heading{ margin:0; font-size:inherit; font-weight:inherit; }
+  .oa-work-title{
+    position:relative; font-size:.875rem; font-weight:600; line-height:1.45;
+    letter-spacing:-.01em; color:var(--text); text-decoration:none;
+  }
+  .oa-work-title::after{
+    content:''; position:absolute; left:0; bottom:-1px; width:100%; height:1px;
+    background:var(--text); transform:scaleX(0); transform-origin:left center;
+    transition:transform .22s cubic-bezier(.4,0,.2,1);
+  }
+  .oa-work-title:hover::after{ transform:scaleX(1); }
+
+  .oa-work-authors{
+    display:block; margin-top:.3rem;
+    font-size:.75rem; line-height:1.6; color:var(--muted);
+  }
+  .oa-work-authors a{ color:inherit; text-decoration:none; }
+  .oa-work-authors a:hover{ color:var(--text); text-decoration:underline; }
+  .oa-work-source{
+    display:block; margin-top:.1rem; font-style:italic;
+    font-size:.8125rem; line-height:1.6; color:var(--muted);
+  }
+
+  .oa-work-links{ display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin-top:.6rem; }
+  .oa-work-link{
+    display:inline-flex; align-items:center; gap:5px;
+    max-width:100%; height:1.375rem; padding:0 .55rem;
+    border:0; border-radius:999px; background:var(--chip-bg);
+    color:var(--muted); font-family:inherit;
+    font-size:.625rem; font-weight:700; letter-spacing:.06em;
+    text-transform:uppercase; text-decoration:none; white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis; cursor:pointer;
+    transition:color .2s, background .2s;
+  }
+  .oa-work-link:hover{ color:var(--text); background:var(--card-border); }
+  .oa-work-link[aria-expanded="true"]{ color:var(--text); }
+  .oa-work-link--doi{ text-transform:none; letter-spacing:0; font-weight:500; }
+
+  /* Acceder au texte reste une action, pas une mention : bouton plein pour
+     le PDF, bouton a filet pour la lecture en ligne. */
+  .oa-work-btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    height:30px; padding:0 13px; border-radius:999px;
+    border:1.5px solid var(--accent); font-family:inherit;
+    font-size:12px; font-weight:700; letter-spacing:.01em;
+    text-decoration:none; white-space:nowrap; cursor:pointer;
+    transition:background-color .18s ease, color .18s ease, transform .18s ease;
+  }
+  .oa-work-btn .material-symbols-outlined{ font-size:16px; line-height:1; }
+  .oa-work-btn--pdf{ color:#fff; background:var(--accent); }
+  .oa-work-btn--read{ color:var(--accent); background:transparent; }
+  .oa-work-btn--read:hover{ color:#fff; background:var(--accent); }
+  .oa-work-btn:hover{ transform:translateY(-1px); }
+  .oa-work-btn:active{ transform:translateY(0); }
+  .oa-work-btn:focus-visible{ outline:2px solid var(--text); outline-offset:2px; }
+  @media (prefers-reduced-motion: reduce){
+    .oa-work-btn{ transition:none; }
+    .oa-work-btn:hover{ transform:none; }
+  }
+
   .oa-work-abstract{
-    max-height:0; overflow:hidden; font-size:12.5px; line-height:1.65; color:var(--muted);
+    max-height:0; overflow:hidden;
+    font-size:.75rem; line-height:1.7; color:var(--muted);
     transition:max-height .3s ease, margin-top .3s ease;
   }
-  .oa-work-abstract.expanded{ max-height:1000px; margin-top:8px; }
-  .oa-work-actions{ display:flex; flex-direction:column; gap:8px; flex-shrink:0; }
-  .oa-work-pdf-btn, .oa-work-html-btn{
-    --btn-c:var(--accent);
-    position:relative; overflow:hidden; isolation:isolate;
-    display:inline-flex; align-items:center; justify-content:center; gap:7px;
-    min-width:118px; padding:8px 16px; border-radius:999px;
-    font-size:12.5px; font-weight:700; letter-spacing:.01em; text-decoration:none; white-space:nowrap;
-    transition:color .2s ease, border-color .2s ease, background-color .2s ease, transform .2s ease, box-shadow .2s ease;
-  }
-  .oa-work-pdf-btn{
-    color:#fff; background:var(--btn-c); border:1.5px solid var(--btn-c);
-    box-shadow:0 2px 6px color-mix(in srgb, var(--btn-c) 25%, transparent);
-  }
-  .oa-work-html-btn{
-    color:var(--btn-c); background:var(--card-solid); border:1.5px solid color-mix(in srgb, var(--btn-c) 35%, transparent);
-  }
-  /* voile qui balaie le bouton au survol */
-  .oa-work-pdf-btn::before, .oa-work-html-btn::before{
-    content:''; position:absolute; inset:0; z-index:-1;
-    transform:translateX(-101%); transition:transform .28s ease;
-  }
-  .oa-work-pdf-btn::before{ background:linear-gradient(120deg, rgba(255,255,255,.0), rgba(255,255,255,.22)); }
-  .oa-work-html-btn::before{ background:var(--btn-c); }
-  .oa-work-pdf-btn .material-symbols-outlined, .oa-work-html-btn .material-symbols-outlined{
-    font-size:17px; transition:transform .25s ease;
-  }
-  .oa-work-pdf-btn:hover, .oa-work-html-btn:hover{
-    transform:translateY(-2px);
-    box-shadow:0 10px 22px -6px color-mix(in srgb, var(--btn-c) 55%, transparent);
-  }
-  .oa-work-pdf-btn:hover::before, .oa-work-html-btn:hover::before{ transform:translateX(0); }
-  .oa-work-html-btn:hover{ color:#fff; border-color:var(--btn-c); }
-  .oa-work-pdf-btn:hover .material-symbols-outlined{ animation:oaDlBounce .7s ease infinite; }
-  .oa-work-html-btn:hover .material-symbols-outlined{ transform:translateX(-2px) rotate(-8deg) scale(1.08); }
-  .oa-work-pdf-btn:active, .oa-work-html-btn:active{ transform:translateY(0); box-shadow:0 3px 8px -2px color-mix(in srgb, var(--btn-c) 45%, transparent); }
-  .oa-work-pdf-btn:focus-visible, .oa-work-html-btn:focus-visible{
-    outline:none; box-shadow:0 0 0 3px var(--card-solid), 0 0 0 5px color-mix(in srgb, var(--btn-c) 60%, transparent);
-  }
-  @keyframes oaDlBounce{ 0%,100%{ transform:translateY(0); } 45%{ transform:translateY(3px); } 70%{ transform:translateY(-1px); } }
-  .oa-work-pdf-btn.disabled{
-    color:var(--muted); background:var(--badge-bg); border-color:var(--card-border);
-    opacity:.6; cursor:not-allowed; pointer-events:none; transform:none; box-shadow:none;
+  .oa-work-abstract.expanded{ max-height:1200px; margin-top:.5rem; }
+
+  @media (max-width:640px){
+    .oa-work-item{ grid-template-columns:minmax(0,1fr); row-gap:.2rem; }
+    .oa-work-year{ padding-top:0; }
   }
   @media (prefers-reduced-motion: reduce){
-    .oa-work-pdf-btn, .oa-work-html-btn, .oa-work-pdf-btn::before, .oa-work-html-btn::before,
-    .oa-work-pdf-btn .material-symbols-outlined, .oa-work-html-btn .material-symbols-outlined{ transition:none; animation:none !important; }
-    .oa-work-pdf-btn:hover, .oa-work-html-btn:hover{ transform:none; }
+    .oa-work-item::before, .oa-work-title::after, .oa-work-abstract{ transition:none; }
   }
   .oa-works-state{ padding:30px 10px; text-align:center; color:var(--muted); font-size:13px; }
 </style>
@@ -6971,17 +7083,25 @@ ${detail}`;
   .oa-journal-page-inner{ max-width:1080px !important; margin:0 auto; padding:28px 20px 56px; }
 
   /* La carte occupe le coin haut droit, en format carre, et suit le theme. */
+  /* Les deux colonnes partent du meme bord haut et finissent ensemble :
+     la plus haute donne la hauteur de la ligne, l'autre s'etire. */
   .oa-journal-head{
     display:grid; grid-template-columns:minmax(0,1fr) 320px;
-    gap:18px; align-items:start;
+    gap:18px; align-items:stretch;
   }
-  .oa-journal-head-main{ grid-column:1; grid-row:1; min-width:0; }
+  .oa-journal-head-main{
+    grid-column:1; grid-row:1; min-width:0;
+    display:flex; flex-direction:column;
+  }
+  .oa-journal-head-main .oa-journal-info{ flex:1 1 auto; margin-bottom:0; }
   /* C12 : la carte seule laissait ~550 px de blanc sous elle. La colonne porte
      maintenant deux cartes empilees, et c'est la colonne qui colle au scroll. */
   .oa-journal-side{
-    grid-column:2; grid-row:1; position:sticky; top:96px;
+    grid-column:2; grid-row:1;
     display:flex; flex-direction:column; gap:14px; min-width:0;
   }
+  /* La carte des liens absorbe l'espace restant, la carte reste carree. */
+  #oa-journal-links-card{ flex:1 1 auto; }
   .oa-journal-map-card{
     padding:12px; border:1px solid var(--card-border); border-radius:16px;
     background:var(--card);
@@ -7008,7 +7128,7 @@ ${detail}`;
   @media (max-width:1000px){
     .oa-journal-head{ grid-template-columns:1fr; }
     .oa-journal-head-main{ grid-column:1; grid-row:1; }
-    .oa-journal-side{ grid-column:1; grid-row:2; position:static; max-width:320px; }
+    .oa-journal-side{ grid-column:1; grid-row:2; max-width:320px; }
   }
 
   /* C12 : sur une fiche, l'entete du catalogue n'a plus a prendre 181 px ni a
@@ -7033,9 +7153,9 @@ ${detail}`;
       <span class="material-symbols-outlined">arrow_back</span>
       Retour au catalogue
     </a>
+    <h1 id="oa-works-title" class="oa-page-title"></h1>
     <div class="oa-journal-head">
       <div class="oa-journal-head-main">
-        <h1 id="oa-works-title" class="oa-page-title"></h1>
         <div id="oa-journal-info" class="oa-journal-info"></div>
       </div>
       <div class="oa-journal-side">
@@ -7155,77 +7275,100 @@ ${detail}`;
     var item = document.createElement('div');
     item.className = 'oa-work-item';
 
+    var year = document.createElement('span');
+    year.className = 'oa-work-year';
+    year.textContent = work.publication_year || '\u2014';
+    item.appendChild(year);
+
     var main = document.createElement('div');
     main.className = 'oa-work-main';
 
+    var heading = document.createElement('h3');
+    heading.className = 'oa-work-heading';
     var title = document.createElement('a');
     title.className = 'oa-work-title';
     title.href = work.id || '#';
     title.target = '_blank';
     title.rel = 'noopener';
     title.textContent = work.title || work.display_name || 'Titre indisponible';
-    main.appendChild(title);
+    heading.appendChild(title);
+    main.appendChild(heading);
 
-    var meta = document.createElement('div');
-    meta.className = 'oa-work-meta';
-    var metaParts = [(work.publication_year || '?'), authorsHtml(work)];
-    var langLabel = languageLabel(work.language);
-    if(langLabel) metaParts.push(esc(langLabel));
-    meta.innerHTML = metaParts.join(' · ');
-    main.appendChild(meta);
+    var authors = document.createElement('span');
+    authors.className = 'oa-work-authors';
+    authors.innerHTML = authorsHtml(work);
+    main.appendChild(authors);
 
+    // Sous-domaine et langue tiennent la place du nom de revue.
+    var bits = [];
     var subfield = work.primary_topic && work.primary_topic.subfield && work.primary_topic.subfield.display_name;
-    if(subfield){
-      var badge = document.createElement('span');
-      badge.className = 'oa-work-subfield';
-      badge.textContent = subfield;
-      main.appendChild(badge);
+    if(subfield) bits.push(esc(subfield));
+    var langLabel = languageLabel(work.language);
+    if(langLabel) bits.push(esc(langLabel));
+    if(bits.length){
+      var source = document.createElement('span');
+      source.className = 'oa-work-source';
+      source.innerHTML = bits.join(' \u00b7 ');
+      main.appendChild(source);
     }
 
+    var links = document.createElement('div');
+    links.className = 'oa-work-links';
+
     var abstractText = invertedIndexToText(work.abstract_inverted_index);
+    var abstractBox = null;
     if(abstractText){
       var toggle = document.createElement('button');
       toggle.type = 'button';
-      toggle.className = 'oa-work-abstract-toggle';
-      toggle.innerHTML = '<span class="material-symbols-outlined">expand_more</span>Résumé';
-      var abstractBox = document.createElement('div');
+      toggle.className = 'oa-work-link';
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.textContent = 'R\u00e9sum\u00e9';
+      abstractBox = document.createElement('div');
       abstractBox.className = 'oa-work-abstract';
       abstractBox.textContent = abstractText;
       toggle.addEventListener('click', function(){
         var open = abstractBox.classList.toggle('expanded');
-        toggle.classList.toggle('expanded', open);
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
       });
-      main.appendChild(toggle);
-      main.appendChild(abstractBox);
+      links.appendChild(toggle);
     }
 
-    item.appendChild(main);
-
-    var actions = document.createElement('div');
-    actions.className = 'oa-work-actions';
-
     var pdfUrl = bestPdfUrl(work);
-    var pdf = document.createElement(pdfUrl ? 'a' : 'span');
-    pdf.className = 'oa-work-pdf-btn' + (pdfUrl ? '' : ' disabled');
-    if(pdfUrl){ pdf.href = pdfUrl; pdf.target = '_blank'; pdf.rel = 'noopener'; pdf.title = 'Télécharger le PDF'; }
-    else { pdf.title = 'PDF non disponible'; }
-    pdf.innerHTML = '<span class="material-symbols-outlined">arrow_downward</span><span>Download</span>';
-    actions.appendChild(pdf);
+    if(pdfUrl){
+      var pdf = document.createElement('a');
+      pdf.className = 'oa-work-btn oa-work-btn--pdf';
+      pdf.href = pdfUrl; pdf.target = '_blank'; pdf.rel = 'noopener';
+      pdf.title = 'T\u00e9l\u00e9charger le PDF';
+      pdf.innerHTML = '<span class="material-symbols-outlined">arrow_downward</span><span>PDF</span>';
+      links.insertBefore(pdf, links.firstChild);
+    }
 
     var htmlUrl = bestHtmlUrl(work, pdfUrl);
     if(htmlUrl){
       var htmlLink = document.createElement('a');
-      htmlLink.className = 'oa-work-html-btn';
-      htmlLink.href = htmlUrl;
-      htmlLink.target = '_blank';
-      htmlLink.rel = 'noopener';
+      htmlLink.className = 'oa-work-btn oa-work-btn--read';
+      htmlLink.href = htmlUrl; htmlLink.target = '_blank'; htmlLink.rel = 'noopener';
       htmlLink.title = 'Lire l\'article en ligne';
       htmlLink.innerHTML = '<span class="material-symbols-outlined">menu_book</span><span>Lire</span>';
-      actions.appendChild(htmlLink);
+      links.insertBefore(htmlLink, pdfUrl ? links.children[1] : links.firstChild);
     }
 
-    item.appendChild(actions);
+    var doi = work.doi ? String(work.doi).replace(/^https?:\/\/(dx\.)?doi\.org\//, '') : null;
+    if(doi){
+      var doiLink = document.createElement('a');
+      doiLink.className = 'oa-work-link oa-work-link--doi';
+      doiLink.href = 'https://doi.org/' + doi;
+      doiLink.target = '_blank'; doiLink.rel = 'noopener';
+      doiLink.textContent = doi;
+      links.appendChild(doiLink);
+    }
 
+    if(window.BIBLIO) window.BIBLIO.decorate(links, work);
+
+    if(links.childNodes.length) main.appendChild(links);
+    if(abstractBox) main.appendChild(abstractBox);
+
+    item.appendChild(main);
     return item;
   }
 
@@ -7710,8 +7853,9 @@ ${detail}`;
   var DB_LOGOS = {
     'DOAJ':            function(){ return typeof DOAJLOGOURL !== 'undefined' ? DOAJLOGOURL : null; },
     'AJOL':            function(){ return typeof AJOLLOGOURL !== 'undefined' ? AJOLLOGOURL : null; },
-    'Crossref':        function(){ return './crossref-logo.jpg'; },
+    'Crossref':        function(){ return './crossref.png'; },
     'OpenAlex':        function(){ return 'https://azilan.me/openalex.png'; },
+    'OpenCitations':   function(){ return './OpenCitations.png'; },
     'Scopus':          function(){ return 'https://upload.wikimedia.org/wikipedia/commons/2/26/Scopus_logo.svg'; },
     'Web of Science':  function(){ return window.WOS_LOGO_URL || null; }
   };
@@ -7745,7 +7889,13 @@ ${detail}`;
     links.innerHTML = ''; bases.innerHTML = '';
 
     if(row[COLS.url]) links.appendChild(externalLink(row[COLS.url], 'Site de la revue'));
-    if(row[COLS.doajUrl]) links.appendChild(externalLink(row[COLS.doajUrl], 'Fiche DOAJ'));
+
+    var oai = (typeof window.oaiOf === 'function') ? window.oaiOf(row[COLS.issn], row[COLS.eissn]) : null;
+    if(oai && oai.url){
+      var oaiLink = externalLink(oai.url + '?verb=Identify', 'Entrep\u00f4t OAI-PMH');
+      oaiLink.title = oai.name ? 'Identify : ' + oai.name : 'Entrep\u00f4t OAI-PMH moissonnable';
+      links.appendChild(oaiLink);
+    }
 
     if(row[COLS.doajUrl]) bases.appendChild(baseChip('DOAJ', row[COLS.doajUrl], 'Indexee dans le DOAJ'));
     otherPlatformLinks(row).forEach(function(o){
@@ -8201,10 +8351,10 @@ html:not(.dark) .apc-eur-badge {
   var DB_NODES = [
     { id:'ajol',          name:'AJOL',          color:'#16a34a', size:72, logo:'https://azilan.me/AJOL_logo.png',                                                   logoSize:[56,56]  },
     { id:'scopus',        name:'Scopus',        color:'#f59e0b', size:72, logo:'https://upload.wikimedia.org/wikipedia/commons/2/26/Scopus_logo.svg',               logoSize:[130,44] },
-    { id:'crossref',      name:'Crossref',      color:'#ea580c', size:68, logo:'./crossref-logo.jpg',                                                               logoSize:[46,46]  },
+    { id:'crossref',      name:'Crossref',      color:'#ea580c', size:68, logo:'./crossref.png',                                                               logoSize:[46,46]  },
     { id:'openalex',      name:'OpenAlex',      color:'#7c3aed', size:68, logo:'https://azilan.me/openalex.png',                                                    logoSize:[56,56]  },
     { id:'wos',           name:'Web of Science',color:'#5a2d82', size:72 },
-    { id:'opencitations', name:'OpenCitations', color:'#f97316', size:68 },
+    { id:'opencitations', name:'OpenCitations', color:'#f97316', size:68, logo:'./OpenCitations.png', logoSize:[44,44] },
   ];
 
   var _activeDbs = new Set(DB_NODES.map(function(d){ return d.id; }));
@@ -8438,10 +8588,10 @@ html:not(.dark) .apc-eur-badge {
         type:'graph', layout:'force',
         data:graph.nodes, links:graph.links,
         categories:[{name:'Bases de données'},{name:'Revues'}],
-        roam:true, focusNodeAdjacency:true,
+        roam:true, focusNodeAdjacency:false,
         force:{ repulsion:130, gravity:0.12, edgeLength:[40,220], layoutAnimation:true, friction:0.55 },
         lineStyle:{ color:'source', curveness:0.25, opacity:0.15, width:1 },
-        emphasis:{ focus:'adjacency', lineStyle:{ opacity:0.7, width:1.5 }, label:{ show:true, fontSize:11, color:textColor } },
+        emphasis:{ focus:'none', lineStyle:{ opacity:0.7, width:1.5 }, label:{ show:true, fontSize:11, color:textColor } },
         scaleLimit:{ min:0.3, max:10 },
       }]
     }, true);
@@ -8490,7 +8640,7 @@ html:not(.dark) .apc-eur-badge {
     renderSrcFilter();
     _chart=echarts.init(el, null, {renderer:'canvas'});
     _chart.showLoading({text:'Enrichissement des données…', maskColor:'transparent', textColor:'var(--muted,#64748b)', fontSize:13});
-    window.addEventListener('resize', function(){ _chart.resize(); });
+    window.addEventListener('resize', function(){ window.deferChartResize(_chart); });
     var themeBtn=document.getElementById('toggle-theme');
     if(themeBtn) themeBtn.addEventListener('click', function(){ setTimeout(applyOption, 320); });
     var _FILTERABLE = {ajol:1,scopus:1,wos:1,crossref:1,openalex:1};
@@ -8797,7 +8947,7 @@ html:not(.dark) .apc-eur-badge {
         data: nodes,
         links: links,
         nodeWidth: 16,
-        nodeGap: 14,
+        nodeGap: 20,
         nodeAlign: 'justify',
         layoutIterations: 0,
         draggable: false,
@@ -8806,7 +8956,7 @@ html:not(.dark) .apc-eur-badge {
         itemStyle: { borderWidth: 0 },
         label: {
           color: tv.text,
-          fontSize: 11.5,
+          fontSize: 11,
           formatter: function(p){ return p.name + '  ' + (p.value||0); }
         },
         levels: [
@@ -8825,7 +8975,7 @@ html:not(.dark) .apc-eur-badge {
     if(typeof COLS==='undefined'){ setTimeout(tryInit,400); return; }
 
     _chart = echarts.init(el, null, {renderer:'canvas'});
-    window.addEventListener('resize', function(){ if(_chart) _chart.resize(); });
+    window.addEventListener('resize', function(){ if(_chart) window.deferChartResize(_chart); });
     applyOption(RAW);
 
     window._treemapRetheme = function(){ if(_chart&&!_chart.isDisposed()) applyOption(RAW); };
@@ -8995,7 +9145,7 @@ html:not(.dark) .apc-eur-badge {
     if(typeof COLS==='undefined'){ setTimeout(tryInit,400); return; }
 
     _chart = echarts.init(el, null, {renderer:'canvas'});
-    window.addEventListener('resize', function(){ if(_chart) _chart.resize(); });
+    window.addEventListener('resize', function(){ if(_chart) window.deferChartResize(_chart); });
     applyOption(RAW);
 
     var themeBtn = document.getElementById('toggle-theme');
@@ -9070,7 +9220,6 @@ html:not(.dark) .apc-eur-badge {
           if(inst && !inst.isDisposed()) inst.resize();
         });
       }
-      window.dispatchEvent(new Event('resize'));
     }, 30);
   }
 
@@ -9434,16 +9583,35 @@ html:not(.dark) .apc-eur-badge {
      fond et un filet interieur, jamais par une teinte. Le filet est en
      box-shadow inset pour ne pas changer la taille de l'item. */
   .eui-luma{
-    position:fixed; left:50%; bottom:18px; z-index:60;
+    position:fixed; left:50%; bottom:20px; z-index:60;
     transform:translateX(-50%);
     display:flex; align-items:center; gap:2px;
-    padding:6px; border-radius:999px;
-    background:var(--card-solid);
+    padding:5px; border-radius:20px;
+    background:color-mix(in srgb, var(--card-solid) 72%, transparent);
     border:1px solid var(--card-border);
-    box-shadow:0 10px 40px rgba(2,6,23,.16);
-    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    box-shadow:0 1px 1px rgba(2,6,23,.04), 0 8px 28px -6px rgba(2,6,23,.18);
+    backdrop-filter:blur(20px) saturate(180%);
+    -webkit-backdrop-filter:blur(20px) saturate(180%);
   }
-  .dark .eui-luma{ box-shadow:0 10px 40px rgba(0,0,0,.5); }
+  /* un liseré clair en haut, comme sur une surface en verre */
+  .eui-luma::before{
+    content:''; position:absolute; inset:0; border-radius:inherit;
+    pointer-events:none;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.55);
+  }
+  .dark .eui-luma{
+    box-shadow:0 1px 1px rgba(0,0,0,.3), 0 8px 28px -6px rgba(0,0,0,.55);
+  }
+  .dark .eui-luma::before{ box-shadow:inset 0 1px 0 rgba(255,255,255,.07); }
+
+  /* Le curseur actif glisse d'une icone a l'autre au lieu de sauter. */
+  .eui-luma-glider{
+    position:absolute; top:5px; left:0; width:40px; height:40px;
+    border-radius:15px; background:var(--chip-bg);
+    box-shadow:inset 0 0 0 1px var(--card-border);
+    opacity:0; pointer-events:none;
+    transition:transform .38s cubic-bezier(.32,.72,0,1), opacity .18s linear;
+  }
 
   .eui-luma-sep{
     flex:0 0 1px; width:1px; height:20px; margin:0 5px;
@@ -9451,20 +9619,22 @@ html:not(.dark) .apc-eur-badge {
   }
 
   .eui-luma-item{
-    position:relative;
+    position:relative; z-index:1;
     display:grid; place-items:center;
     flex:0 0 40px; width:40px; height:40px;
-    border:0; border-radius:14px; background:transparent;
+    border:0; border-radius:15px; background:transparent;
     color:var(--muted); font-family:inherit;
     text-decoration:none; cursor:pointer;
-    transition:background-color .18s ease, color .18s ease;
+    transition:color .18s ease, transform .18s cubic-bezier(.32,.72,0,1);
   }
   .eui-luma-item svg{ width:19px; height:19px; display:block; }
-  .eui-luma-item:hover{ background:var(--chip-bg); color:var(--text); }
+  .eui-luma-item:hover{ color:var(--text); transform:translateY(-2px); }
+  .eui-luma-item:active{ transform:translateY(0) scale(.94); }
   .eui-luma-item[aria-current="true"],
-  .eui-luma-item[data-child-active="true"]{
-    background:var(--chip-bg); color:var(--text);
-    box-shadow:inset 0 0 0 1px var(--card-border);
+  .eui-luma-item[data-child-active="true"]{ color:var(--text); }
+  @media (prefers-reduced-motion: reduce){
+    .eui-luma-glider{ transition:none; }
+    .eui-luma-item, .eui-luma-item:hover{ transform:none; }
   }
 
   .eui-luma-badge{
@@ -9706,31 +9876,31 @@ html:not(.dark) .apc-eur-badge {
 
   /* ---------------------------------------------------------------- 1 */
   var PATHS = {
-    target:   '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1.2"/>',
-    chart:    '<path d="M3 20h18"/><path d="M7 20v-6"/><path d="M12 20V8"/><path d="M17 20v-9"/>',
-    book:     '<path d="M4 5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-2z"/><path d="M8 3v18"/>',
-    flag:     '<path d="M5 21V4h13l-2.5 4.5L18 13H5"/>',
-    fileText: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/>',
-    database: '<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
-    arrowLeft:'<path d="M19 12H5"/><path d="M11 18l-6-6 6-6"/>',
-    info:     '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/>',
-    pin:      '<path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
-    trending: '<path d="M3 17l6-6 4 4 7-7"/><path d="M17 8h4v4"/>',
-    sparkle:  '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/>',
-    list:     '<path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3.5 6h.01"/><path d="M3.5 12h.01"/><path d="M3.5 18h.01"/>',
-    panel:    '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/>',
-    sun:      '<circle cx="12" cy="12" r="4.4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="M4.2 4.2l1.4 1.4"/><path d="M18.4 18.4l1.4 1.4"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="M4.2 19.8l1.4-1.4"/><path d="M18.4 5.6l1.4-1.4"/>',
-    moon:     '<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/>',
-    chevronR: '<path d="M9 6l6 6-6 6"/>',
+    compass:  '<circle cx="12" cy="12" r="10"/><path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36z"/>',
+    chart:    '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><rect x="7" y="12" width="3" height="6" rx="1"/><rect x="12.5" y="8" width="3" height="10" rx="1"/><rect x="18" y="5" width="3" height="13" rx="1"/>',
+    library:  '<rect x="3" y="3" width="7" height="18" rx="1.5"/><path d="M6.5 3v18"/><path d="M13.6 4.6l4.8-1.3a1 1 0 0 1 1.2.7l3.1 14.3a1 1 0 0 1-.7 1.2l-2.6.7a1 1 0 0 1-1.2-.7z"/>',
+    megaphone:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M12 7.5v4"/><path d="M12 15h.01"/>',
+    fileText: '<path d="M15 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6z"/><path d="M15 2v4a2 2 0 0 0 2 2h4"/><path d="M9 13h6"/><path d="M9 17h4"/>',
+    database: '<ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v13c0 1.7 3.6 3 8 3s8-1.3 8-3v-13"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+    arrowLeft:'<path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>',
+    info:     '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+    pin:      '<path d="M20 10c0 5-5.5 10.2-7.4 11.8a1 1 0 0 1-1.2 0C9.5 20.2 4 15 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
+    trending: '<path d="M22 7l-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/>',
+    sparkle:  '<path d="M12 2.6l1.9 5.3a2 2 0 0 0 1.2 1.2l5.3 1.9-5.3 1.9a2 2 0 0 0-1.2 1.2L12 19.4l-1.9-5.3a2 2 0 0 0-1.2-1.2L3.6 11l5.3-1.9a2 2 0 0 0 1.2-1.2z"/><path d="M19 3v3"/><path d="M20.5 4.5h-3"/>',
+    newspaper:'<path d="M4 22h15a2 2 0 0 0 2-2V4a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1v16a2 2 0 0 1-4 0v-9a1 1 0 0 1 1-1h2"/><path d="M10 7h7"/><path d="M10 11h7"/><path d="M10 15h4"/>',
+    panel:    '<rect x="3" y="3" width="18" height="18" rx="2.5"/><path d="M9 3v18"/>',
+    sun:      '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="M4.93 4.93l1.41 1.41"/><path d="M17.66 17.66l1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="M4.93 19.07l1.41-1.41"/><path d="M17.66 6.34l1.41-1.41"/>',
+    moon:     '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9"/>',
+    chevronR: '<path d="M9 18l6-6-6-6"/>',
     chevronD: '<path d="M6 9l6 6 6-6"/>',
-    chevronL: '<path d="M15 6l-6 6 6 6"/>',
-    check:    '<path d="M4 12.5l5 5L20 6.5"/>',
-    alert:    '<circle cx="12" cy="12" r="9"/><path d="M12 7v6"/><path d="M12 16.5h.01"/>',
-    rotate:   '<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/>',
+    chevronL: '<path d="M15 18l-6-6 6-6"/>',
+    check:    '<path d="M20 6L9 17l-5-5"/>',
+    alert:    '<circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>',
+    rotate:   '<path d="M3 12a9 9 0 0 1 9-9 9.7 9.7 0 0 1 6.7 2.7L21 8"/><path d="M21 3v5h-5"/>',
     dot:      '<circle cx="12" cy="12" r="3"/>'
   };
   function icon(name){
-    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" '
       + 'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (PATHS[name] || '') + '</svg>';
   }
 
@@ -9885,6 +10055,11 @@ html:not(.dark) .apc-eur-badge {
     bar.className = 'eui-luma';
     bar.setAttribute('aria-label', 'Navigation du site');
 
+    var glider = document.createElement('span');
+    glider.className = 'eui-luma-glider';
+    glider.setAttribute('aria-hidden', 'true');
+    bar.appendChild(glider);
+
     var tip = document.createElement('div');
     tip.className = 'eui-luma-tip';
     tip.setAttribute('role', 'presentation');
@@ -9996,8 +10171,15 @@ html:not(.dark) .apc-eur-badge {
       });
       var isSub = rec.el.classList.contains('eui-luma-sub');
       rec.el.setAttribute('aria-current', isSub ? 'page' : 'true');
+      var marked = rec.el;
       if(rec.parent && itemsById[rec.parent]){
         itemsById[rec.parent].el.setAttribute('data-child-active', 'true');
+        marked = itemsById[rec.parent].el;
+      }
+      if(marked && marked.parentNode === bar){
+        glider.style.transform = 'translateX(' + marked.offsetLeft + 'px)';
+        glider.style.width = marked.offsetWidth + 'px';
+        glider.style.opacity = '1';
       }
     }
 
@@ -10430,7 +10612,7 @@ html:not(.dark) .apc-eur-badge {
 
   var CATALOGUE = [
     { title: 'Explorer', items: [
-      { id: 'section-reco', label: 'Recommandations', icon: 'target' },
+      { id: 'section-reco', label: 'Recommandations', icon: 'compass' },
       { id: 'section-viz',  label: 'Visualisations',  icon: 'chart', children: [
         { id: 'viz-map',              label: 'Carte' },
         { id: 'viz-treemap',          label: 'Disciplines' },
@@ -10439,10 +10621,10 @@ html:not(.dark) .apc-eur-badge {
         { id: 'viz-apc-ratio',        label: 'Frais de publication' },
         { id: 'viz-indexation-graph', label: 'Indexation' }
       ] },
-      { id: 'section-list', label: 'Revues', icon: 'book', badge: '' }
+      { id: 'section-list', label: 'Revues', icon: 'library', badge: '' }
     ] },
     { title: 'Contribuer', items: [
-      { id: 'section-report', label: 'Signaler', icon: 'flag' }
+      { id: 'section-report', label: 'Signaler', icon: 'megaphone' }
     ] },
     { title: 'Ressources', items: [
       { id: 'doc',  label: 'Documentation', icon: 'fileText', href: 'documentation.html' },
@@ -10459,7 +10641,7 @@ html:not(.dark) .apc-eur-badge {
       { id: 'oa-journal-map-wrap',   label: 'Localisation',     icon: 'pin' },
       { id: 'oa-pubyear-chart-wrap', label: 'Publications',     icon: 'trending' },
       { id: 'oa-topics-wrap',        label: 'Présentation',     icon: 'sparkle' },
-      { id: 'oa-works-body',         label: 'Articles indexés', icon: 'list' }
+      { id: 'oa-works-body',         label: 'Articles indexés', icon: 'newspaper' }
     ] }
   ];
 
@@ -10534,6 +10716,571 @@ html:not(.dark) .apc-eur-badge {
     /* interrupteurs liquides : filtres d'indexation + recommandateur */
     window.EUI.liquifyAllSwitches();
   });
+})();
+</script>
+
+<!-- Mesure d'audience : Counterscale (MIT), auto-heberge sur le compte
+     Cloudflare du site. Sans cookie, sans donnee personnelle, donc sans
+     banniere de consentement. Le traceur ignore de lui-meme localhost,
+     et suit les changements d'URL par pushState (fiches de revue).
+     Tableau de bord : https://counterscale.ynnonazaline.workers.dev -->
+<script
+  id="counterscale-script"
+  data-site-id="observatoire-oa"
+  src="https://counterscale.ynnonazaline.workers.dev/tracker.js"
+  defer></script>
+<style id="biblio-export-css">
+  /* Citer / Signet : memes pastilles que « Resume », pour ne pas ajouter un
+     troisieme niveau de bouton dans la notice. */
+  .oa-work-link--cite .material-symbols-outlined,
+  .oa-work-link--mark .material-symbols-outlined{ font-size:13px; line-height:1; }
+  .oa-work-link--mark.on{ color:#ef4444; background:rgba(239,68,68,.12); }
+  .oa-work-link--mark.on:hover{ background:rgba(239,68,68,.2); }
+
+  #cite-modal .inner{ width:min(640px, 94vw); }
+  .cite-tabs{ display:flex; flex-wrap:wrap; gap:7px; margin:14px 0 12px; }
+  .cite-tab{
+    padding:6px 15px; border-radius:999px; cursor:pointer; font-family:inherit;
+    font-size:12.5px; font-weight:700; white-space:nowrap;
+    border:1.5px solid var(--card-border); background:transparent; color:var(--muted);
+    transition:border-color .18s, color .18s, background .18s;
+  }
+  .cite-tab:hover{ border-color:var(--accent); color:var(--accent); }
+  .cite-tab.active{ border-color:var(--accent); background:var(--accent); color:#fff; }
+  #cite-text{
+    width:100%; min-height:140px; resize:vertical; padding:14px 16px;
+    border-radius:12px; border:1px solid var(--card-border);
+    background:var(--badge-bg); color:var(--text);
+    font-size:13px; line-height:1.65; font-family:inherit; outline:none;
+  }
+  #cite-text.mono{ font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; }
+  .cite-actions{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .cite-actions .spacer{ flex:1 1 auto; }
+  .cite-btn{
+    display:inline-flex; align-items:center; gap:6px; padding:9px 16px;
+    border-radius:10px; border:1px solid var(--card-border); background:var(--card);
+    color:var(--text); font-size:13px; font-weight:600; font-family:inherit; cursor:pointer;
+  }
+  .cite-btn:hover{ border-color:var(--accent); color:var(--accent); }
+  .cite-btn .material-symbols-outlined{ font-size:17px; line-height:1; }
+  .cite-btn--primary{ border:none; background:var(--accent); color:#fff; font-weight:700; }
+  .cite-btn--primary:hover{ color:#fff; opacity:.9; }
+
+  /* Le panier se pose a gauche : le coin droit appartient deja au signet des
+     revues (#bookmarks-fab), qui n'a pas a se decaler pour celui-ci. */
+  #basket-fab{
+    display:none; position:fixed; bottom:24px; left:24px; z-index:500;
+    align-items:center; gap:8px; padding:13px 20px; border-radius:999px; border:none;
+    background:var(--text); color:var(--bg); font-weight:700; font-size:13.5px;
+    font-family:inherit; cursor:pointer; box-shadow:0 14px 32px rgba(0,0,0,.28);
+  }
+  #basket-fab .material-symbols-outlined{ font-size:19px; line-height:1; }
+  #basket-fab-count{ background:rgba(127,127,127,.35); border-radius:999px; padding:1px 8px; font-size:11.5px; font-weight:800; }
+  #basket-modal .inner{ width:min(620px, 94vw); }
+  .basket-item{
+    display:flex; align-items:flex-start; gap:10px; padding:9px 0;
+    border-top:1px solid var(--card-border); font-size:12.5px; line-height:1.55;
+  }
+  .basket-item:first-child{ border-top:0; }
+  .basket-item .t{ flex:1; min-width:0; color:var(--text); }
+  .basket-item .m{ display:block; color:var(--muted); font-size:11.5px; margin-top:2px; }
+  .basket-item button{
+    flex:0 0 auto; background:none; border:none; cursor:pointer; color:var(--muted);
+    font-size:15px; line-height:1; padding:2px 6px; border-radius:7px;
+  }
+  .basket-item button:hover{ color:#ef4444; }
+  @media (max-width:640px){
+    #basket-fab{ left:12px; bottom:12px; padding:11px 16px; }
+  }
+</style>
+
+<div class="modal" id="cite-modal">
+  <div class="inner">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+      <div>
+        <div style="font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);">Citer cet article</div>
+        <div id="cite-modal-title" style="font-weight:800;font-size:15px;margin-top:4px;line-height:1.4;"></div>
+      </div>
+      <button class="cite-close" title="Fermer" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:20px;line-height:1;padding:4px 8px;border-radius:8px;">&#x2715;</button>
+    </div>
+    <div class="cite-tabs" id="cite-tabs" role="tablist"></div>
+    <textarea id="cite-text" readonly spellcheck="false"></textarea>
+    <div class="cite-actions">
+      <button class="cite-btn" id="cite-dl-ris"><span class="material-symbols-outlined">download</span>Télécharger .ris</button>
+      <button class="cite-btn" id="cite-dl-bib"><span class="material-symbols-outlined">download</span>Télécharger .bib</button>
+      <span class="spacer"></span>
+      <button class="cite-btn cite-close">Fermer</button>
+      <button class="cite-btn cite-btn--primary" id="cite-copy"><span class="material-symbols-outlined">content_copy</span>Copier</button>
+    </div>
+  </div>
+</div>
+
+<button id="basket-fab" title="Exporter ma sélection d'articles">
+  <span class="material-symbols-outlined">bookmarks</span>
+  Ma bibliographie
+  <span id="basket-fab-count"></span>
+</button>
+
+<div class="modal" id="basket-modal">
+  <div class="inner">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div style="font-weight:800;font-size:17px;">Ma bibliographie</div>
+      <button class="basket-close" title="Fermer" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:20px;line-height:1;padding:4px 8px;border-radius:8px;">&#x2715;</button>
+    </div>
+    <div id="basket-body" style="max-height:48vh;overflow-y:auto;margin-bottom:14px;"></div>
+    <div class="cite-actions" style="margin-top:0;">
+      <button class="cite-btn" id="basket-dl-ris"><span class="material-symbols-outlined">download</span>RIS</button>
+      <button class="cite-btn" id="basket-dl-bib"><span class="material-symbols-outlined">download</span>BibTeX</button>
+      <button class="cite-btn" id="basket-dl-csv"><span class="material-symbols-outlined">download</span>CSV</button>
+      <span class="spacer"></span>
+      <button class="cite-btn" id="basket-clear">Tout retirer</button>
+    </div>
+  </div>
+</div>
+
+<script id="biblio-export-js">
+/* ──────────────────────────────────────────────────────────────────────────
+ * Citations et export bibliographique des articles d'une revue.
+ *
+ * Une seule source : l'objet Work d'OpenAlex deja charge par la liste des
+ * articles. On en tire une reference neutre (toRef), puis chaque format
+ * n'est qu'une mise en forme de cette reference. Le panier ne stocke que
+ * ces references, pas les Works entiers : localStorage tient 5 Mo.
+ * ────────────────────────────────────────────────────────────────────────── */
+(function(){
+  'use strict';
+
+  var BASKET_KEY = 'oa_biblio_basket_v1';
+  var FORMATS = ['APA 7', 'MLA 9', 'Chicago', 'ISO 690', 'BibTeX'];
+
+  function esc(s){
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Reference neutre ────────────────────────────────────────────────────
+  function toRef(work){
+    var loc = work.primary_location || {};
+    var src = loc.source || {};
+    var b   = work.biblio || {};
+    var doi = work.doi ? String(work.doi).replace(/^https?:\/\/(dx\.)?doi\.org\//i, '') : '';
+    return {
+      id:        work.id || '',
+      doi:       doi,
+      title:     work.title || work.display_name || '',
+      authors:   (work.authorships || []).map(function(a){
+                   return (a.author && a.author.display_name) || a.raw_author_name || '';
+                 }).filter(Boolean),
+      year:      work.publication_year || '',
+      date:      work.publication_date || '',
+      journal:   src.display_name || '',
+      publisher: src.host_organization_name || '',
+      issn:      (src.issn_l || (src.issn && src.issn[0]) || ''),
+      volume:    b.volume || '',
+      issue:     b.issue || '',
+      firstPage: b.first_page || '',
+      lastPage:  b.last_page || '',
+      lang:      work.language || '',
+      type:      work.type || 'article',
+      url:       doi ? 'https://doi.org/' + doi : (work.id || '')
+    };
+  }
+
+  function pages(r){
+    if(r.firstPage && r.lastPage && r.firstPage !== r.lastPage) return r.firstPage + '-' + r.lastPage;
+    return r.firstPage || '';
+  }
+
+  /** « Marie Claire Dupont » -> { last:'Dupont', first:'Marie Claire', initials:'M. C.' } */
+  function splitName(full){
+    var parts = String(full).trim().split(/\s+/);
+    if(parts.length === 1) return { last: parts[0], first: '', initials: '' };
+    var last = parts.pop();
+    var first = parts.join(' ');
+    var initials = parts.map(function(p){ return p.charAt(0).toUpperCase() + '.'; }).join(' ');
+    return { last: last, first: first, initials: initials };
+  }
+
+  /** Joint une liste deja formatee : « A », « A & B », « A, B, & C ». */
+  function joinList(items, amp){
+    if(!items.length) return '';
+    if(items.length === 1) return items[0];
+    // La virgule avant le connecteur vaut des deux auteurs (APA 7 : « Muka, M.,
+    // & Diop, A. N. » ; Chicago 17 : « Muka, Moise, and Awa Ndiaye Diop »).
+    var sep = amp ? ' & ' : ' and ';
+    return items.slice(0, -1).join(', ') + ',' + sep + items[items.length - 1];
+  }
+
+  function dot(s){ return /[.?!]$/.test(String(s).trim()) ? String(s).trim() : String(s).trim() + '.'; }
+
+  // ── Formats ─────────────────────────────────────────────────────────────
+  // APA 7 : au-dela de 20 auteurs, les 19 premiers, des points de suspension,
+  // puis le dernier (manuel, 9.8).
+  function apa(r){
+    var names = r.authors.map(function(a){ var n = splitName(a); return n.initials ? n.last + ', ' + n.initials : n.last; });
+    var list;
+    if(!names.length)           list = '';
+    else if(names.length <= 20) list = joinList(names, true);
+    else                        list = names.slice(0, 19).join(', ') + ', … ' + names[names.length - 1];
+
+    var out = (list ? dot(list) + ' ' : '') + '(' + (r.year || 's.d.') + '). ' + dot(r.title);
+    if(r.journal){
+      out += ' ' + r.journal;
+      if(r.volume) out += ', ' + r.volume + (r.issue ? '(' + r.issue + ')' : '');
+      if(pages(r)) out += ', ' + pages(r);
+      out += '.';
+    }
+    if(r.url) out += ' ' + r.url;
+    return out;
+  }
+
+  // MLA 9 : trois auteurs ou plus se reduisent au premier suivi de « et al. ».
+  function mla(r){
+    var list = '';
+    if(r.authors.length === 1){
+      var a = splitName(r.authors[0]);
+      list = a.first ? a.last + ', ' + a.first : a.last;
+    } else if(r.authors.length === 2){
+      var x = splitName(r.authors[0]);
+      list = (x.first ? x.last + ', ' + x.first : x.last) + ', and ' + r.authors[1];
+    } else if(r.authors.length > 2){
+      var y = splitName(r.authors[0]);
+      list = (y.first ? y.last + ', ' + y.first : y.last) + ', et al';
+    }
+    var out = (list ? dot(list) + ' ' : '') + '"' + dot(r.title) + '"';
+    if(r.journal){
+      out += ' ' + r.journal;
+      if(r.volume) out += ', vol. ' + r.volume;
+      if(r.issue)  out += ', no. ' + r.issue;
+      if(r.year)   out += ', ' + r.year;
+      if(pages(r)) out += ', pp. ' + pages(r);
+    } else if(r.year){ out += ' ' + r.year; }
+    out += '.';
+    if(r.doi) out += ' https://doi.org/' + r.doi + '.';
+    else if(r.url) out += ' ' + r.url + '.';
+    return out;
+  }
+
+  // Chicago 17, auteur-date : seul le premier auteur est inverse.
+  function chicago(r){
+    var names = r.authors.map(function(a, i){
+      if(i > 0) return a;
+      var n = splitName(a);
+      return n.first ? n.last + ', ' + n.first : n.last;
+    });
+    var list = names.length > 10
+      ? names.slice(0, 7).join(', ') + ', et al'
+      : joinList(names, false);
+    var out = (list ? dot(list) + ' ' : '') + (r.year || 'n.d.') + '. "' + dot(r.title) + '"';
+    if(r.journal){
+      out += ' ' + r.journal;
+      if(r.volume) out += ' ' + r.volume;
+      if(r.issue)  out += ' (' + r.issue + ')';
+      if(pages(r)) out += ': ' + pages(r);
+    }
+    out += '.';
+    if(r.url) out += ' ' + r.url + '.';
+    return out;
+  }
+
+  // ISO 690 (3e ed.) : nom de famille en capitales, support entre crochets.
+  function iso690(r){
+    var names = r.authors.slice(0, 3).map(function(a){
+      var n = splitName(a);
+      return n.last.toUpperCase() + (n.first ? ', ' + n.first : '');
+    });
+    var list = names.join('; ') + (r.authors.length > 3 ? ' et al' : '');
+    var out = (list ? dot(list) + ' ' : '') + dot(r.title) + ' ' + (r.journal || '') + ' [en ligne]';
+    out += '. ' + (r.year || 's.d.');
+    if(r.volume) out += ', vol. ' + r.volume;
+    if(r.issue)  out += ', no. ' + r.issue;
+    if(pages(r)) out += ', pp. ' + pages(r);
+    out += '.';
+    if(r.issn) out += ' ISSN ' + r.issn + '.';
+    if(r.url)  out += ' Disponible à l’adresse : ' + r.url;
+    return out;
+  }
+
+  function bibKey(r){
+    var last = r.authors.length ? splitName(r.authors[0]).last : 'anon';
+    var word = (r.title.match(/[A-Za-zÀ-ÿ]{4,}/) || ['ref'])[0];
+    return (last + (r.year || '') + word).toLowerCase().normalize('NFD').replace(/[^a-z0-9]/g, '');
+  }
+
+  function bibtex(r){
+    var f = [];
+    if(r.authors.length) f.push(['author',  r.authors.join(' and ')]);
+    // Double accolade sur le titre : sans elle, la plupart des styles BibTeX
+    // passent « OAI-PMH » en « oai-pmh ». Les accolades du titre lui-meme
+    // casseraient l'entree, on les retire.
+    if(r.title)     f.push(['title',   '{' + String(r.title).replace(/[{}]/g, '') + '}']);
+    if(r.journal)   f.push(['journal', r.journal]);
+    if(r.year)      f.push(['year',    r.year]);
+    if(r.volume)    f.push(['volume',  r.volume]);
+    if(r.issue)     f.push(['number',  r.issue]);
+    if(r.firstPage) f.push(['pages',   r.lastPage && r.lastPage !== r.firstPage ? r.firstPage + '--' + r.lastPage : r.firstPage]);
+    if(r.publisher) f.push(['publisher', r.publisher]);
+    if(r.issn)      f.push(['issn',    r.issn]);
+    if(r.doi)       f.push(['doi',     r.doi]);
+    if(r.url)       f.push(['url',     r.url]);
+    if(r.lang)      f.push(['language', r.lang]);
+    var body = f.map(function(p){
+      return '  ' + (p[0] + '        ').slice(0, 9) + '= {' + String(p[1]) + '}';
+    }).join(',\n');
+    return '@article{' + bibKey(r) + ',\n' + body + '\n}';
+  }
+
+  function ris(r){
+    var L = ['TY  - JOUR'];
+    r.authors.forEach(function(a){
+      var n = splitName(a);
+      L.push('AU  - ' + (n.first ? n.last + ', ' + n.first : n.last));
+    });
+    if(r.title)     L.push('TI  - ' + r.title);
+    if(r.journal){  L.push('JO  - ' + r.journal); L.push('JF  - ' + r.journal); }
+    if(r.year)      L.push('PY  - ' + r.year);
+    if(r.date)      L.push('DA  - ' + String(r.date).replace(/-/g, '/'));
+    if(r.volume)    L.push('VL  - ' + r.volume);
+    if(r.issue)     L.push('IS  - ' + r.issue);
+    if(r.firstPage) L.push('SP  - ' + r.firstPage);
+    if(r.lastPage)  L.push('EP  - ' + r.lastPage);
+    if(r.publisher) L.push('PB  - ' + r.publisher);
+    if(r.issn)      L.push('SN  - ' + r.issn);
+    if(r.doi)       L.push('DO  - ' + r.doi);
+    if(r.url)       L.push('UR  - ' + r.url);
+    if(r.lang)      L.push('LA  - ' + r.lang);
+    L.push('ER  - ');
+    return L.join('\r\n');
+  }
+
+  function format(name, r){
+    if(name === 'APA 7')   return apa(r);
+    if(name === 'MLA 9')   return mla(r);
+    if(name === 'Chicago') return chicago(r);
+    if(name === 'ISO 690') return iso690(r);
+    if(name === 'BibTeX')  return bibtex(r);
+    return apa(r);
+  }
+
+  function csv(refs){
+    var head = ['Auteurs', 'Année', 'Titre', 'Revue', 'Volume', 'Numéro', 'Pages', 'DOI', 'URL'];
+    var q = function(v){
+      var s = String(v == null ? '' : v);
+      return /[",\r\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    var lines = [head.map(q).join(',')];
+    refs.forEach(function(r){
+      lines.push([r.authors.join(' ; '), r.year, r.title, r.journal, r.volume, r.issue, pages(r), r.doi, r.url].map(q).join(','));
+    });
+    return '﻿' + lines.join('\r\n');
+  }
+
+  function download(text, filename, mime){
+    var blob = new Blob([text], { type: (mime || 'text/plain') + ';charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+  }
+
+  function slug(s){
+    return String(s || 'reference').normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48).toLowerCase() || 'reference';
+  }
+
+  // ── Panier ──────────────────────────────────────────────────────────────
+  var basket = [];
+  try {
+    var stored = JSON.parse(localStorage.getItem(BASKET_KEY) || '[]');
+    if(Array.isArray(stored)) basket = stored.filter(function(r){ return r && r.id; });
+  } catch(e){}
+
+  function saveBasket(){
+    try { localStorage.setItem(BASKET_KEY, JSON.stringify(basket)); } catch(e){}
+  }
+  function inBasket(id){ return basket.some(function(r){ return r.id === id; }); }
+  function toggleBasket(ref){
+    var i = -1;
+    basket.forEach(function(r, k){ if(r.id === ref.id) i = k; });
+    if(i > -1) basket.splice(i, 1); else basket.push(ref);
+    saveBasket();
+    syncBasket();
+  }
+
+  function syncBasket(){
+    var fab = document.getElementById('basket-fab');
+    if(fab) fab.style.display = basket.length ? 'inline-flex' : 'none';
+    var cnt = document.getElementById('basket-fab-count');
+    if(cnt) cnt.textContent = String(basket.length);
+    Array.prototype.forEach.call(document.querySelectorAll('.oa-work-link--mark'), function(btn){
+      var on = inBasket(btn.getAttribute('data-work-id'));
+      btn.classList.toggle('on', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      btn.title = on ? 'Retirer de ma bibliographie' : 'Ajouter à ma bibliographie';
+    });
+    var modal = document.getElementById('basket-modal');
+    if(modal && modal.style.display === 'flex') renderBasket();
+  }
+
+  function renderBasket(){
+    var body = document.getElementById('basket-body');
+    if(!body) return;
+    if(!basket.length){
+      body.innerHTML = '<div style="padding:18px 0;color:var(--muted);font-size:13px;">Aucun article sélectionné.</div>';
+      return;
+    }
+    body.innerHTML = '';
+    basket.forEach(function(r){
+      var row = document.createElement('div');
+      row.className = 'basket-item';
+      var meta = [r.authors.slice(0, 3).join(', ') + (r.authors.length > 3 ? ', et al.' : ''), r.year, r.journal]
+        .filter(Boolean).join(' · ');
+      row.innerHTML = '<div class="t">' + esc(r.title || 'Sans titre') +
+        '<span class="m">' + esc(meta) + '</span></div>' +
+        '<button title="Retirer">&#x2715;</button>';
+      row.querySelector('button').addEventListener('click', function(){
+        basket = basket.filter(function(x){ return x.id !== r.id; });
+        saveBasket(); syncBasket(); renderBasket();
+      });
+      body.appendChild(row);
+    });
+  }
+
+  // ── Modale « Citer » ────────────────────────────────────────────────────
+  var current = null, currentFormat = FORMATS[0];
+
+  function paintCite(){
+    if(!current) return;
+    var area = document.getElementById('cite-text');
+    area.value = format(currentFormat, current);
+    area.classList.toggle('mono', currentFormat === 'BibTeX');
+    Array.prototype.forEach.call(document.querySelectorAll('.cite-tab'), function(t){
+      var on = t.getAttribute('data-fmt') === currentFormat;
+      t.classList.toggle('active', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+  }
+
+  function openCite(ref){
+    current = ref;
+    var modal = document.getElementById('cite-modal');
+    if(!modal) return;
+    document.getElementById('cite-modal-title').textContent = ref.title || 'Article';
+    var tabs = document.getElementById('cite-tabs');
+    if(!tabs.childNodes.length){
+      FORMATS.forEach(function(f){
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'cite-tab';
+        b.setAttribute('data-fmt', f);
+        b.setAttribute('role', 'tab');
+        b.textContent = f;
+        b.addEventListener('click', function(){ currentFormat = f; paintCite(); });
+        tabs.appendChild(b);
+      });
+    }
+    paintCite();
+    modal.style.display = 'flex';
+  }
+
+  function closeModals(){
+    ['cite-modal', 'basket-modal'].forEach(function(id){
+      var m = document.getElementById(id);
+      if(m) m.style.display = 'none';
+    });
+  }
+
+  function copyArea(){
+    var area = document.getElementById('cite-text');
+    var btn  = document.getElementById('cite-copy');
+    var old  = btn.innerHTML;
+    var done = function(){
+      btn.textContent = 'Copié !';
+      setTimeout(function(){ btn.innerHTML = old; }, 1700);
+    };
+    var fallback = function(){ area.select(); try { document.execCommand('copy'); } catch(e){} done(); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(area.value).then(done, fallback);
+    } else { fallback(); }
+  }
+
+  function bind(){
+    Array.prototype.forEach.call(document.querySelectorAll('.cite-close, .basket-close'), function(b){
+      b.addEventListener('click', closeModals);
+    });
+    ['cite-modal', 'basket-modal'].forEach(function(id){
+      var m = document.getElementById(id);
+      if(m) m.addEventListener('click', function(e){ if(e.target === m) closeModals(); });
+    });
+    document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeModals(); });
+
+    var on = function(id, fn){ var el = document.getElementById(id); if(el) el.addEventListener('click', fn); };
+    on('cite-copy', copyArea);
+    on('cite-dl-ris', function(){ if(current) download(ris(current), slug(current.title) + '.ris', 'application/x-research-info-systems'); });
+    on('cite-dl-bib', function(){ if(current) download(bibtex(current), slug(current.title) + '.bib', 'application/x-bibtex'); });
+
+    on('basket-fab', function(){ renderBasket(); document.getElementById('basket-modal').style.display = 'flex'; });
+    on('basket-dl-ris', function(){ if(basket.length) download(basket.map(ris).join('\r\n'), 'bibliographie.ris', 'application/x-research-info-systems'); });
+    on('basket-dl-bib', function(){ if(basket.length) download(basket.map(bibtex).join('\n\n'), 'bibliographie.bib', 'application/x-bibtex'); });
+    on('basket-dl-csv', function(){ if(basket.length) download(csv(basket), 'bibliographie.csv', 'text/csv'); });
+    on('basket-clear', function(){
+      if(basket.length && confirm('Retirer les ' + basket.length + ' articles de votre bibliographie ?')){
+        basket = []; saveBasket(); syncBasket(); renderBasket();
+      }
+    });
+    syncBasket();
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
+  else bind();
+
+  // ── API utilisee par renderWork() ───────────────────────────────────────
+  window.BIBLIO = {
+    toRef: toRef,
+    format: format,
+    ris: ris,
+    bibtex: bibtex,
+    csv: csv,
+    /** Ajoute les pastilles « Citer » et « Signet » a la barre de liens d'une notice. */
+    decorate: function(links, work){
+      var ref = toRef(work);
+
+      var cite = document.createElement('button');
+      cite.type = 'button';
+      cite.className = 'oa-work-link oa-work-link--cite';
+      cite.title = 'Citer cet article';
+      cite.innerHTML = '<span class="material-symbols-outlined">format_quote</span>Citer';
+      cite.addEventListener('click', function(){ openCite(ref); });
+      links.appendChild(cite);
+
+      var mark = document.createElement('button');
+      mark.type = 'button';
+      mark.className = 'oa-work-link oa-work-link--mark';
+      mark.setAttribute('data-work-id', ref.id);
+      mark.innerHTML = '<span class="material-symbols-outlined">bookmark</span>Signet';
+      mark.addEventListener('click', function(){ toggleBasket(ref); });
+      links.appendChild(mark);
+
+      var on = inBasket(ref.id);
+      mark.classList.toggle('on', on);
+      mark.setAttribute('aria-pressed', on ? 'true' : 'false');
+      mark.title = on ? 'Retirer de ma bibliographie' : 'Ajouter à ma bibliographie';
+    }
+  };
+
+  /** Entrepot OAI-PMH connu pour cette revue, ou null. Rempli par /enrichment. */
+  window.oaiOf = function(issn, eissn){
+    var m = window.OAI_MAP;
+    if(!m) return null;
+    var n = function(v){
+      var s = String(v || '').replace(/[^0-9Xx]/g, '').toUpperCase();
+      return s.length === 8 ? s.slice(0, 4) + '-' + s.slice(4) : '';
+    };
+    return m[n(eissn)] || m[n(issn)] || null;
+  };
 })();
 </script>
 
