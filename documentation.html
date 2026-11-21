@@ -2219,7 +2219,9 @@ si tryFetchCSV() échoue :
           «&nbsp;Réessayer&nbsp;».</li>
         <li><strong>Articles</strong> — liste paginée des publications OpenAlex&nbsp;: titre lié à OpenAlex,
           année, trois premiers auteurs, langue, sous-discipline, résumé dépliable et lien vers le texte
-          intégral lorsqu'une localisation en libre accès est connue.</li>
+          intégral lorsqu'une localisation en libre accès est connue. Les trois actions de la notice —
+          PDF, Citer, Signet — tiennent une colonne à droite, centrée sur la hauteur du texte&nbsp;; le bas
+          de la notice ne garde que les mentions, résumé, lecture en ligne et DOI.</li>
       </ul>
       <p class="note">
         <strong>Rendu en deux temps.</strong> Le bloc d'informations est rendu une première fois dès que le corpus
@@ -2262,7 +2264,8 @@ si tryFetchCSV() échoue :
         <li><strong>Panier</strong> — <code>bibliographie.bib</code>, <code>bibliographie.ris</code> et
           <code>bibliographie.csv</code>. Le panier conserve des références neutres, pas les notices
           OpenAlex entières&nbsp;: celles-ci dépasseraient vite le quota de 5&nbsp;Mo de
-          <code>localStorage</code>.</li>
+          <code>localStorage</code>. Il se consulte dans <a href="#ui-collection">Ma collection</a>, avec
+          les revues signalées.</li>
       </ul>
       <p class="note">
         <strong>C'est le seul bloc testé automatiquement.</strong> <code>node test_biblio.js</code> extrait
@@ -2271,15 +2274,28 @@ si tryFetchCSV() échoue :
         seule logique du bloc qui puisse se tromper en silence.
       </p>
 
-      <h3 id="ui-signets">Signets</h3>
+      <h3 id="ui-collection">Ma collection</h3>
       <p>
-        Chaque carte porte un bouton signet. La sélection est conservée dans <code>localStorage</code> sous la clé
-        <code>oa_bookmarks_v1</code>, et un bouton flottant affiche le compte courant. La liste s'exporte en
-        <code>signets.csv</code>, <code>signets.pdf</code> ou <code>signets.md</code>.
+        Une seule porte pour deux listes. Chaque carte de revue porte un bouton signet, chaque notice
+        d'article un bouton panier&nbsp;; les deux alimentent la même modale, ouverte par une pastille
+        flottante unique au coin droit, qui affiche le total et disparaît quand tout est vide.
       </p>
+      <div class="tw tw--large">
+        <table>
+          <thead><tr><th scope="col">Liste</th><th scope="col">Clé <code>localStorage</code></th><th scope="col">Exports</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Revues</th><td><code>oa_bookmarks_v1</code></td><td><code>signets.csv</code>, <code>signets.pdf</code>, <code>signets.md</code></td></tr>
+            <tr><th scope="row">Articles</th><td><code>oa_biblio_basket_v1</code></td><td><code>bibliographie.ris</code>, <code>bibliographie.bib</code>, <code>bibliographie.csv</code></td></tr>
+            <tr><th scope="row">Les deux</th><td>—</td><td><code>collection.md</code>&nbsp;: les revues en fiches, les articles en références APA 7</td></tr>
+          </tbody>
+        </table>
+      </div>
       <p class="note">
-        <strong>Signets et panier ne sont pas la même liste.</strong> Les signets retiennent des revues, le
-        panier des articles. Deux clés distinctes, deux exports distincts.
+        <strong>Deux listes, un seul guichet.</strong> Les données restent séparées — une revue n'est pas une
+        référence bibliographique — mais les deux pastilles flottantes d'avant, l'une à gauche pour les
+        articles, l'autre à droite pour les revues, obligeaient à savoir laquelle ouvrir pour une même
+        intention. Le décompte partagé vit dans <code>window.COLLECTION</code>, que chaque liste met à jour
+        de son côté.
       </p>
 
       <h3 id="ui-feedback">Signalement</h3>
@@ -3075,10 +3091,10 @@ try {
             </tr>
             <tr>
               <th scope="row">Panier et signets dans <code>localStorage</code></th>
-              <td>Les deux listes vivent dans le navigateur du visiteur, sous <code>oa_biblio_basket_v1</code> et
-                <code>oa_bookmarks_v1</code>. Rien n'est synchronisé, rien n'est récupérable après un nettoyage
-                du stockage du site. Le panier ne conserve que des références neutres, pour tenir dans le quota
-                de 5&nbsp;Mo.</td>
+              <td>Les deux listes de <a href="#ui-collection">Ma collection</a> vivent dans le navigateur du
+                visiteur, sous <code>oa_biblio_basket_v1</code> et <code>oa_bookmarks_v1</code>. Rien n'est
+                synchronisé, rien n'est récupérable après un nettoyage du stockage du site. Le panier ne
+                conserve que des références neutres, pour tenir dans le quota de 5&nbsp;Mo.</td>
             </tr>
             <tr>
               <th scope="row">Tableau de bord d'audience ouvert</th>
@@ -3193,6 +3209,7 @@ try {
         <ul>
           <li>Awuvé Innocent Azilan — <a href="https://azilan.me" target="_blank" rel="noopener noreferrer">azilan.me&nbsp;↗</a></li>
           <li>Application sous licence <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer">CC BY-NC 4.0&nbsp;↗</a></li>
+          <li>Observatoire V6.0, mis à jour le 21 novembre 2026</li>
           <li>Documentation technique, V6.0, 21 novembre 2026</li>
         </ul>
       </div>
@@ -3202,6 +3219,7 @@ try {
           <li><a href="https://doaj.org" target="_blank" rel="noopener noreferrer">DOAJ&nbsp;↗</a> — Directory of Open Access Journals</li>
           <li><a href="https://www.ajol.info" target="_blank" rel="noopener noreferrer">AJOL&nbsp;↗</a> — index issu de Alonso-Álvarez, P. (2025), <em>AJOL dataset</em>, Zenodo, <a href="https://doi.org/10.5281/zenodo.15383374" target="_blank" rel="noopener noreferrer">10.5281/zenodo.15383374&nbsp;↗</a></li>
           <li><a href="https://www.crossref.org" target="_blank" rel="noopener noreferrer">Crossref&nbsp;↗</a>, <a href="https://openalex.org" target="_blank" rel="noopener noreferrer">OpenAlex&nbsp;↗</a>, <a href="https://opencitations.net" target="_blank" rel="noopener noreferrer">OpenCitations&nbsp;↗</a></li>
+          <li><a href="https://www.openarchives.org/pmh/" target="_blank" rel="noopener noreferrer">OAI-PMH&nbsp;↗</a> — les entrepôts des revues elles-mêmes, sondés par le verbe <em>Identify</em></li>
           <li><a href="https://github.com/wosaide/wosaide-journal-lists" target="_blank" rel="noopener noreferrer">Web of Science&nbsp;↗</a> — listes AHCI, ESCI, SCIE, SSCI</li>
           <li><a href="https://www.scopus.com" target="_blank" rel="noopener noreferrer">Scopus&nbsp;↗</a>, <a href="https://openexchangerates.org" target="_blank" rel="noopener noreferrer">Open Exchange Rates&nbsp;↗</a></li>
           <li><a href="https://www.jawg.io" target="_blank" rel="noopener noreferrer">Jawg Maps&nbsp;↗</a>, <a href="https://www.openstreetmap.org" target="_blank" rel="noopener noreferrer">OpenStreetMap&nbsp;↗</a> sous licence ODbL</li>
@@ -3213,7 +3231,9 @@ try {
           <li><a href="https://echarts.apache.org" target="_blank" rel="noopener noreferrer">Apache ECharts&nbsp;↗</a>, <a href="https://leafletjs.com" target="_blank" rel="noopener noreferrer">Leaflet&nbsp;↗</a></li>
           <li><a href="https://www.papaparse.com" target="_blank" rel="noopener noreferrer">PapaParse&nbsp;↗</a>, <a href="https://d3js.org" target="_blank" rel="noopener noreferrer">D3&nbsp;↗</a></li>
           <li><a href="https://github.com/parallax/jsPDF" target="_blank" rel="noopener noreferrer">jsPDF&nbsp;↗</a>, <a href="https://github.com/lipis/flag-icons" target="_blank" rel="noopener noreferrer">flag-icons&nbsp;↗</a></li>
+          <li><a href="https://www.npmjs.com/package/thinking-orbs" target="_blank" rel="noopener noreferrer">thinking-orbs&nbsp;↗</a>, <a href="https://fonts.google.com/icons" target="_blank" rel="noopener noreferrer">Material Symbols&nbsp;↗</a>, <a href="https://fonts.google.com/specimen/Manrope" target="_blank" rel="noopener noreferrer">Manrope&nbsp;↗</a></li>
           <li><a href="https://developers.cloudflare.com/workers-ai/" target="_blank" rel="noopener noreferrer">Workers AI&nbsp;↗</a> — Llama 3.1 8B</li>
+          <li><a href="https://github.com/benvinegar/counterscale" target="_blank" rel="noopener noreferrer">Counterscale&nbsp;↗</a> — mesure d'audience auto-hébergée, MIT</li>
         </ul>
       </div>
     </div>

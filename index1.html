@@ -1563,8 +1563,8 @@ body{position:relative;z-index:1;background:transparent !important}
         <span class="material-symbols-outlined" style="font-size:22px;color:#818cf8;">menu_book</span>
       </div>
       <div style="min-width:0;">
-        <div style="font-weight:750;font-size:14px;color:#818cf8;letter-spacing:-.01em;margin-bottom:2px;">Documentation technique — V6.0</div>
-        <div style="font-size:12.5px;color:var(--muted);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Architecture, sources de données, visualisations, déploiement Cloudflare…</div>
+        <div style="font-weight:750;font-size:14px;color:#818cf8;letter-spacing:-.01em;margin-bottom:2px;">Documentation technique — V6.0 &middot; 21 novembre 2026</div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Architecture, schéma de métadonnées, visualisations, déploiement Cloudflare…</div>
       </div>
     </div>
     <div style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);font-weight:700;font-size:13px;color:#818cf8;flex-shrink:0;white-space:nowrap;">
@@ -1577,9 +1577,12 @@ body{position:relative;z-index:1;background:transparent !important}
     <div style="border-top:1px solid var(--card-border);padding-top:24px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;font-size:12px;line-height:1.7;color:var(--muted);">
       <div>
         <div style="font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;color:var(--text);">Observatoire</div>
-        <div><strong style="color:var(--text);">V5</strong> — 2026 · Mise à jour automatique mensuelle des données DOAJ.</div>
+        <div><strong style="color:var(--text);">Observatoire V6.0</strong> — mise à jour le 21 novembre 2026</div>
+        <div><a href="documentation.html" style="color:var(--accent);">Documentation technique V6.0</a> — mise à jour le 21 novembre 2026</div>
+        <div style="margin-top:4px;">Corpus DOAJ reconstruit chaque dimanche à 03 h UTC, compatibilité OAI-PMH balayée toutes les quinze minutes.</div>
         <div style="margin-top:4px;">Proposé par <a href="https://www.azilan.me" target="_blank" rel="noopener" style="color:var(--accent);">Innocent Azilan</a></div>
         <div>Licence application : <a href="https://creativecommons.org/licenses/by/4.0/deed.fr" target="_blank" rel="noopener" style="color:var(--accent);">CC BY 4.0</a></div>
+        <div>Audience mesurée par <a href="https://github.com/benvinegar/counterscale" target="_blank" rel="noopener" style="color:var(--accent);">Counterscale</a>, auto-hébergé, sans cookie · MIT</div>
       </div>
       <div>
         <div style="font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;color:var(--text);">Données & APIs</div>
@@ -1587,7 +1590,11 @@ body{position:relative;z-index:1;background:transparent !important}
         <div><a href="https://www.ajol.info" target="_blank" rel="noopener" style="color:var(--accent);">AJOL</a> — African Journals OnLine · Liste des revues : <a href="https://doi.org/10.5281/zenodo.15383374" target="_blank" rel="noopener" style="color:var(--accent);">Alonso-Álvarez, P. (2025). <em>AJOL dataset</em>. Zenodo.</a></div>
         <div><a href="https://api.crossref.org" target="_blank" rel="noopener" style="color:var(--accent);">Crossref API</a> — Métadonnées articles · <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener" style="color:var(--accent);">CC0</a></div>
         <div><a href="https://github.com/wosaide/wosaide-journal-lists" target="_blank" rel="noopener" style="color:var(--accent);">Web of Science</a> — Listes AHCI, ESCI, SCIE, SSCI (<em>wosaide/wosaide-journal-lists</em>) · vérification hebdomadaire automatique</div>
-        <div><a href="https://openalex.org" target="_blank" rel="noopener" style="color:var(--accent);">OpenAlex API</a> — Indexation ouverte · <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener" style="color:var(--accent);">CC0</a></div>
+        <div><a href="https://openalex.org" target="_blank" rel="noopener" style="color:var(--accent);">OpenAlex API</a> — Indexation ouverte, notices d'articles et références bibliographiques · <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener" style="color:var(--accent);">CC0</a></div>
+        <div><a href="https://opencitations.net" target="_blank" rel="noopener" style="color:var(--accent);">OpenCitations</a> — Citations ouvertes · <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener" style="color:var(--accent);">CC0</a></div>
+        <div><a href="https://www.scopus.com" target="_blank" rel="noopener" style="color:var(--accent);">Scopus</a> — Liste de titres, export daté (<em>wosaide/wosaide-journal-lists</em>) · vérification hebdomadaire automatique</div>
+        <div><a href="https://www.openarchives.org/pmh/" target="_blank" rel="noopener" style="color:var(--accent);">OAI-PMH</a> — Entrepôts des revues elles-mêmes, sondés par le Worker (verbe <em>Identify</em>)</div>
+        <div><a href="https://developers.cloudflare.com/workers-ai/" target="_blank" rel="noopener" style="color:var(--accent);">Workers AI</a> — Présentation éditoriale des revues, modèle Llama 3.1 8B</div>
         <div><a href="https://open.er-api.com" target="_blank" rel="noopener" style="color:var(--accent);">Open Exchange Rates API</a> — Taux de change</div>
         <div><a href="https://www.jawg.io" target="_blank" rel="noopener" style="color:var(--accent);">Jawg Maps</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" style="color:var(--accent);">OpenStreetMap</a> · <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noopener" style="color:var(--accent);">ODbL</a></div>
       </div>
@@ -1596,8 +1603,12 @@ body{position:relative;z-index:1;background:transparent !important}
         <div><a href="https://echarts.apache.org" target="_blank" rel="noopener" style="color:var(--accent);">Apache ECharts</a> — Visualisations · <a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener" style="color:var(--accent);">Apache 2.0</a></div>
         <div><a href="https://leafletjs.com" target="_blank" rel="noopener" style="color:var(--accent);">Leaflet.js</a> — Cartographie · <a href="https://opensource.org/licenses/BSD-2-Clause" target="_blank" rel="noopener" style="color:var(--accent);">BSD-2</a></div>
         <div><a href="https://www.papaparse.com" target="_blank" rel="noopener" style="color:var(--accent);">PapaParse</a> — Parsing CSV · MIT</div>
+        <div><a href="https://d3js.org" target="_blank" rel="noopener" style="color:var(--accent);">D3</a> et <a href="https://github.com/jasondavies/d3-cloud" target="_blank" rel="noopener" style="color:var(--accent);">d3-cloud</a> — Nuage de mots-clés · ISC et MIT</div>
+        <div><a href="https://github.com/parallax/jsPDF" target="_blank" rel="noopener" style="color:var(--accent);">jsPDF</a> — Exports PDF · MIT</div>
+        <div><a href="https://github.com/lipis/flag-icons" target="_blank" rel="noopener" style="color:var(--accent);">flag-icons</a> — Drapeaux par code ISO 2 · MIT</div>
+        <div><a href="https://www.npmjs.com/package/thinking-orbs" target="_blank" rel="noopener" style="color:var(--accent);">thinking-orbs</a> — Orbe de l'écran de chargement · MIT</div>
         <div><a href="https://fonts.google.com/icons" target="_blank" rel="noopener" style="color:var(--accent);">Material Symbols</a> — Icônes · Apache 2.0</div>
-        <div><a href="https://fonts.google.com/specimen/Inter" target="_blank" rel="noopener" style="color:var(--accent);">Inter</a> — Police principale · OFL</div>
+        <div><a href="https://fonts.google.com/specimen/Manrope" target="_blank" rel="noopener" style="color:var(--accent);">Manrope</a> — Police unique de l'interface · OFL</div>
       </div>
     </div>
   </footer>
@@ -1704,33 +1715,121 @@ body{position:relative;z-index:1;background:transparent !important}
   </div>
 </div>
 
-<div class="modal" id="bookmarks-modal">
-  <div class="inner">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-      <div style="font-weight:800;font-size:17px;">Mes revues sauvegardées</div>
-      <button id="bookmarks-modal-close" title="Fermer" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:20px;line-height:1;padding:4px 8px;border-radius:8px;">&#x2715;</button>
+<!-- Une seule collection. Les revues signalees et les articles mis de cote
+     tenaient deux pastilles flottantes, une a gauche et une a droite, et deux
+     modales : il fallait savoir laquelle ouvrir pour une meme intention. Les
+     listes restent distinctes, leurs exports aussi, mais la porte est commune,
+     et « Tout exporter » les reunit dans un seul fichier. -->
+<div class="modal" id="collection-modal">
+  <div class="inner" style="width:min(680px,94vw);">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-weight:800;font-size:17px;">Ma collection</div>
+      <button id="bookmarks-modal-close" class="basket-close" title="Fermer" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:20px;line-height:1;padding:4px 8px;border-radius:8px;">&#x2715;</button>
     </div>
-    <div id="bookmarks-modal-body" style="max-height:50vh;overflow-y:auto;margin-bottom:14px;"></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <button class="btn" id="bookmarks-export-csv" style="flex:1;justify-content:center;padding:10px 14px;font-size:13px;">
-        <span class="material-symbols-outlined" style="font-size:17px;">table_view</span>CSV
-      </button>
-      <button class="btn" id="bookmarks-export-pdf" style="flex:1;justify-content:center;padding:10px 14px;font-size:13px;">
-        <span class="material-symbols-outlined" style="font-size:17px;">picture_as_pdf</span>PDF
-      </button>
-      <button class="btn" id="bookmarks-export-md" style="flex:1;justify-content:center;padding:10px 14px;font-size:13px;">
-        <span class="material-symbols-outlined" style="font-size:17px;">description</span>Markdown
-      </button>
+    <div class="subtle" style="margin:2px 0 16px;font-size:12.5px;">
+      <span id="collection-count-revues">0</span> revues &middot; <span id="collection-count-articles">0</span> articles
     </div>
-    <button id="bookmarks-clear-all" style="width:100%;margin-top:8px;background:none;border:1px solid var(--card-border);color:var(--muted);border-radius:12px;padding:9px 14px;font-size:12.5px;cursor:pointer;font-family:inherit;">Tout effacer</button>
+
+    <div class="collection-head">Revues</div>
+    <div id="bookmarks-modal-body" style="max-height:26vh;overflow-y:auto;"></div>
+    <div class="cite-actions" style="margin:10px 0 20px;">
+      <button class="cite-btn" id="bookmarks-export-csv"><span class="material-symbols-outlined">table_view</span>CSV</button>
+      <button class="cite-btn" id="bookmarks-export-pdf"><span class="material-symbols-outlined">picture_as_pdf</span>PDF</button>
+      <button class="cite-btn" id="bookmarks-export-md"><span class="material-symbols-outlined">description</span>Markdown</button>
+      <span class="spacer"></span>
+      <button class="cite-btn" id="bookmarks-clear-all">Tout retirer</button>
+    </div>
+
+    <div class="collection-head">Articles</div>
+    <div id="basket-body" style="max-height:26vh;overflow-y:auto;"></div>
+    <div class="cite-actions" style="margin:10px 0 20px;">
+      <button class="cite-btn" id="basket-dl-ris"><span class="material-symbols-outlined">download</span>RIS</button>
+      <button class="cite-btn" id="basket-dl-bib"><span class="material-symbols-outlined">download</span>BibTeX</button>
+      <button class="cite-btn" id="basket-dl-csv"><span class="material-symbols-outlined">download</span>CSV</button>
+      <span class="spacer"></span>
+      <button class="cite-btn" id="basket-clear">Tout retirer</button>
+    </div>
+
+    <div style="border-top:1px solid var(--card-border);padding-top:13px;display:flex;align-items:center;gap:10px;">
+      <div class="subtle" style="font-size:12px;flex:1;min-width:0;">Revues et articles dans un seul fichier Markdown.</div>
+      <button class="cite-btn cite-btn--primary" id="collection-export-all"><span class="material-symbols-outlined">download</span>Tout exporter</button>
+    </div>
   </div>
 </div>
 
-<button id="bookmarks-fab" title="Exporter mes revues sauvegardées" style="display:none;position:fixed;bottom:24px;right:24px;z-index:500;align-items:center;gap:8px;padding:13px 20px;border-radius:999px;border:none;background:var(--accent);color:#fff;font-weight:700;font-size:13.5px;font-family:inherit;cursor:pointer;box-shadow:0 14px 32px rgba(37,99,235,.4);">
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-  <span>Exporter mes signets</span>
-  <span id="bookmarks-fab-count" style="background:rgba(255,255,255,.28);border-radius:999px;padding:1px 8px;font-size:11.5px;font-weight:800;"></span>
+<button id="collection-fab" title="Ouvrir ma collection">
+  <span class="material-symbols-outlined">bookmarks</span>
+  Ma collection
+  <span id="collection-fab-count"></span>
 </button>
+
+<script id="collection-js">
+/* Decompte partage par les deux listes : chacune pose le sien, la pastille
+   affiche le total et disparait quand les deux sont vides. */
+window.COLLECTION = (function(){
+  'use strict';
+  var n = { revues: 0, articles: 0 };
+
+  function txt(id, v){ var el = document.getElementById(id); if(el) el.textContent = String(v); }
+
+  function paint(){
+    var total = n.revues + n.articles;
+    var fab = document.getElementById('collection-fab');
+    if(fab) fab.style.display = total ? 'inline-flex' : 'none';
+    txt('collection-fab-count', total);
+    txt('collection-count-revues', n.revues);
+    txt('collection-count-articles', n.articles);
+  }
+
+  function download(text, name){
+    var b = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+    var u = URL.createObjectURL(b), a = document.createElement('a');
+    a.href = u; a.download = name; document.body.appendChild(a); a.click();
+    document.body.removeChild(a); setTimeout(function(){ URL.revokeObjectURL(u); }, 1500);
+  }
+
+  /* Un seul fichier pour les deux listes : les revues en fiches, les articles
+     en references APA 7, le format que la modale « Citer » propose d'abord. */
+  function exportAll(){
+    var rows = (window.BOOKMARKS && window.BOOKMARKS.rows()) || [];
+    var refs = (window.BIBLIO && window.BIBLIO.list && window.BIBLIO.list()) || [];
+    if(!rows.length && !refs.length) return;
+    var out = ['# Ma collection', '',
+      'Observatoire des revues africaines en libre accès — export du ' +
+        new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }), ''];
+    out.push('## Revues (' + rows.length + ')', '');
+    if(!rows.length) out.push('_Aucune revue._', '');
+    rows.forEach(function(row){
+      var f = (window.BOOKMARKS && window.BOOKMARKS.fields(row)) || [];
+      out.push('### ' + ((f[0] && f[0][1]) || 'Revue sans titre'), '');
+      f.slice(1).forEach(function(pair){
+        if(pair[1]) out.push('- **' + pair[0] + '** : ' + pair[1]);
+      });
+      out.push('');
+    });
+    out.push('## Articles (' + refs.length + ')', '');
+    if(!refs.length) out.push('_Aucun article._', '');
+    refs.forEach(function(r, i){
+      out.push((i + 1) + '. ' + window.BIBLIO.format('APA 7', r));
+    });
+    out.push('');
+    download(out.join('\n'), 'collection.md');
+  }
+
+  function bind(){
+    var b = document.getElementById('collection-export-all');
+    if(b) b.addEventListener('click', exportAll);
+    paint();
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
+  else bind();
+
+  return {
+    set: function(kind, v){ n[kind] = v || 0; paint(); },
+    exportAll: exportAll
+  };
+})();
+</script>
 
 
 <script>
@@ -5315,7 +5414,7 @@ ${detail}`;
         const empty = document.createElement('div');
         empty.className = 'subtle';
         empty.style.cssText = 'padding:20px 0;text-align:center;';
-        empty.textContent = 'Aucune revue sauvegardée pour l’instant. Cliquez sur le cœur d’une carte pour l’ajouter ici.';
+        empty.textContent = 'Aucune revue. Cliquez sur le signet d’une carte pour l’ajouter ici.';
         body.appendChild(empty);
         return;
       }
@@ -5346,11 +5445,8 @@ ${detail}`;
         btn.title = on ? 'Retirer des signets' : 'Ajouter aux signets';
       });
       const n = BOOKMARKS_ORDER.length;
-      const fab = document.getElementById('bookmarks-fab');
-      if (fab) fab.style.display = n ? 'inline-flex' : 'none';
-      const fabCount = document.getElementById('bookmarks-fab-count');
-      if (fabCount) fabCount.textContent = String(n);
-      const modal = document.getElementById('bookmarks-modal');
+      if (window.COLLECTION) window.COLLECTION.set('revues', n);
+      const modal = document.getElementById('collection-modal');
       if (modal && getComputedStyle(modal).display !== 'none') renderBookmarksModalList();
     }
 
@@ -5381,8 +5477,8 @@ ${detail}`;
     }
 
     function bindBookmarksUI(){
-      const fab = document.getElementById('bookmarks-fab');
-      const modal = document.getElementById('bookmarks-modal');
+      const fab = document.getElementById('collection-fab');
+      const modal = document.getElementById('collection-modal');
       const closeBtn = document.getElementById('bookmarks-modal-close');
       if (fab && modal) {
         fab.addEventListener('click', () => {
@@ -5410,6 +5506,8 @@ ${detail}`;
     window.toggleBookmark = toggleBookmark;
     window.isBookmarked = isBookmarked;
     window.bookmarkKeyForRow = bookmarkKeyForRow;
+    /* Lu par la collection unifiée, pour l'export commun. */
+    window.BOOKMARKS = { rows: getBookmarkedRows, fields: getExportFields };
 
     function bindExportButtons(){
       const mdBtn = document.getElementById('export-md');
@@ -6952,10 +7050,22 @@ ${detail}`;
   .oa-works-body{ margin:0 0 20px; }
   .oa-work-item{
     position:relative;
-    display:grid; grid-template-columns:5.25rem minmax(0,1fr);
+    display:grid; grid-template-columns:5.25rem minmax(0,1fr) auto;
     column-gap:1.25rem;
     padding:1rem 0; border-top:1px solid var(--card-border);
   }
+  /* PDF, Citer et Signet tiennent une colonne a droite, centree sur la hauteur
+     de la notice. En bas, ils se melaient au DOI et au resume, qui sont des
+     mentions et non des actions. */
+  .oa-work-actions{
+    display:flex; flex-direction:column; align-items:flex-end; justify-content:center;
+    gap:7px; align-self:center; padding-left:.5rem;
+  }
+  /* PDF et Citer a la meme largeur, le signet en pastille carree dessous :
+     trois largeurs libres faisaient une colonne en escalier. */
+  .oa-work-actions .oa-work-link{ height:1.75rem; }
+  .oa-work-actions .oa-work-btn,
+  .oa-work-actions .oa-work-link--cite{ min-width:5.5rem; }
   .oa-work-item:first-child{ border-top:0; }
   .oa-work-item::before{
     content:''; position:absolute; inset:.375rem -.75rem;
@@ -7043,6 +7153,10 @@ ${detail}`;
 
   @media (max-width:640px){
     .oa-work-item{ grid-template-columns:minmax(0,1fr); row-gap:.2rem; }
+    .oa-work-actions{
+      flex-direction:row; align-items:center; justify-content:flex-start;
+      padding-left:0; margin-top:.55rem;
+    }
     .oa-work-year{ padding-top:0; }
   }
   @media (prefers-reduced-motion: reduce){
@@ -7314,6 +7428,9 @@ ${detail}`;
     var links = document.createElement('div');
     links.className = 'oa-work-links';
 
+    var actions = document.createElement('div');
+    actions.className = 'oa-work-actions';
+
     var abstractText = invertedIndexToText(work.abstract_inverted_index);
     var abstractBox = null;
     if(abstractText){
@@ -7339,7 +7456,7 @@ ${detail}`;
       pdf.href = pdfUrl; pdf.target = '_blank'; pdf.rel = 'noopener';
       pdf.title = 'T\u00e9l\u00e9charger le PDF';
       pdf.innerHTML = '<span class="material-symbols-outlined">arrow_downward</span><span>PDF</span>';
-      links.insertBefore(pdf, links.firstChild);
+      actions.appendChild(pdf);
     }
 
     var htmlUrl = bestHtmlUrl(work, pdfUrl);
@@ -7349,7 +7466,7 @@ ${detail}`;
       htmlLink.href = htmlUrl; htmlLink.target = '_blank'; htmlLink.rel = 'noopener';
       htmlLink.title = 'Lire l\'article en ligne';
       htmlLink.innerHTML = '<span class="material-symbols-outlined">menu_book</span><span>Lire</span>';
-      links.insertBefore(htmlLink, pdfUrl ? links.children[1] : links.firstChild);
+      links.insertBefore(htmlLink, links.firstChild);
     }
 
     var doi = work.doi ? String(work.doi).replace(/^https?:\/\/(dx\.)?doi\.org\//, '') : null;
@@ -7362,12 +7479,13 @@ ${detail}`;
       links.appendChild(doiLink);
     }
 
-    if(window.BIBLIO) window.BIBLIO.decorate(links, work);
+    if(window.BIBLIO) window.BIBLIO.decorate(links, work, actions);
 
     if(links.childNodes.length) main.appendChild(links);
     if(abstractBox) main.appendChild(abstractBox);
 
     item.appendChild(main);
+    if(actions.childNodes.length) item.appendChild(actions);
     return item;
   }
 
@@ -9636,13 +9754,16 @@ html:not(.dark) .apc-eur-badge {
     .eui-luma-item, .eui-luma-item:hover{ transform:none; }
   }
 
+  /* Le decompte des revues se lit comme une notification : rouge plein, encre
+     blanche. C'est la seule couleur franche de la barre, assumee pour cela. */
   .eui-luma-badge{
-    position:absolute; top:-2px; right:-5px;
-    min-width:16px; height:15px; padding:0 4px;
+    position:absolute; top:-3px; right:-6px;
+    min-width:17px; height:16px; padding:0 4px;
     display:grid; place-items:center;
-    border:1px solid var(--card-border); border-radius:8px;
-    background:var(--card-solid); color:var(--muted);
-    font-size:.5625rem; font-weight:700; font-variant-numeric:tabular-nums;
+    border:1px solid #ef4444; border-radius:999px;
+    background:#ef4444; color:#fff;
+    font-size:.5625rem; font-weight:800; font-variant-numeric:tabular-nums;
+    box-shadow:0 1px 4px rgba(239,68,68,.45);
     pointer-events:none;
   }
   .eui-luma-badge:empty{ display:none; }
@@ -10733,8 +10854,12 @@ html:not(.dark) .apc-eur-badge {
      troisieme niveau de bouton dans la notice. */
   .oa-work-link--cite .material-symbols-outlined,
   .oa-work-link--mark .material-symbols-outlined{ font-size:13px; line-height:1; }
-  .oa-work-link--mark.on{ color:#ef4444; background:rgba(239,68,68,.12); }
-  .oa-work-link--mark.on:hover{ background:rgba(239,68,68,.2); }
+  /* Le signet n'est qu'une icone : le mot « Signet » doublait le pictogramme et
+     allongeait la colonne. Rouge quand il est pose, comme la pastille du menu. */
+  .oa-work-link--mark{ width:1.625rem; padding:0; justify-content:center; }
+  .oa-work-link--mark .material-symbols-outlined{ font-size:15px; }
+  .oa-work-link--mark.on{ color:#ef4444; background:rgba(239,68,68,.14); }
+  .oa-work-link--mark.on:hover{ color:#ef4444; background:rgba(239,68,68,.24); }
 
   #cite-modal .inner{ width:min(640px, 94vw); }
   .cite-tabs{ display:flex; flex-wrap:wrap; gap:7px; margin:14px 0 12px; }
@@ -10765,17 +10890,19 @@ html:not(.dark) .apc-eur-badge {
   .cite-btn--primary{ border:none; background:var(--accent); color:#fff; font-weight:700; }
   .cite-btn--primary:hover{ color:#fff; opacity:.9; }
 
-  /* Le panier se pose a gauche : le coin droit appartient deja au signet des
-     revues (#bookmarks-fab), qui n'a pas a se decaler pour celui-ci. */
-  #basket-fab{
-    display:none; position:fixed; bottom:24px; left:24px; z-index:500;
+  /* Une seule pastille, au coin droit. */
+  #collection-fab{
+    display:none; position:fixed; bottom:24px; right:24px; z-index:500;
     align-items:center; gap:8px; padding:13px 20px; border-radius:999px; border:none;
-    background:var(--text); color:var(--bg); font-weight:700; font-size:13.5px;
-    font-family:inherit; cursor:pointer; box-shadow:0 14px 32px rgba(0,0,0,.28);
+    background:var(--accent); color:#fff; font-weight:700; font-size:13.5px;
+    font-family:inherit; cursor:pointer; box-shadow:0 14px 32px rgba(37,99,235,.4);
   }
-  #basket-fab .material-symbols-outlined{ font-size:19px; line-height:1; }
-  #basket-fab-count{ background:rgba(127,127,127,.35); border-radius:999px; padding:1px 8px; font-size:11.5px; font-weight:800; }
-  #basket-modal .inner{ width:min(620px, 94vw); }
+  #collection-fab .material-symbols-outlined{ font-size:19px; line-height:1; }
+  #collection-fab-count{ background:rgba(255,255,255,.28); border-radius:999px; padding:1px 8px; font-size:11.5px; font-weight:800; }
+  .collection-head{
+    font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:.08em;
+    color:var(--muted); margin-bottom:6px;
+  }
   .basket-item{
     display:flex; align-items:flex-start; gap:10px; padding:9px 0;
     border-top:1px solid var(--card-border); font-size:12.5px; line-height:1.55;
@@ -10789,7 +10916,7 @@ html:not(.dark) .apc-eur-badge {
   }
   .basket-item button:hover{ color:#ef4444; }
   @media (max-width:640px){
-    #basket-fab{ left:12px; bottom:12px; padding:11px 16px; }
+    #collection-fab{ right:12px; bottom:12px; padding:11px 16px; }
   }
 </style>
 
@@ -10814,28 +10941,8 @@ html:not(.dark) .apc-eur-badge {
   </div>
 </div>
 
-<button id="basket-fab" title="Exporter ma sélection d'articles">
-  <span class="material-symbols-outlined">bookmarks</span>
-  Ma bibliographie
-  <span id="basket-fab-count"></span>
-</button>
-
-<div class="modal" id="basket-modal">
-  <div class="inner">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-      <div style="font-weight:800;font-size:17px;">Ma bibliographie</div>
-      <button class="basket-close" title="Fermer" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:20px;line-height:1;padding:4px 8px;border-radius:8px;">&#x2715;</button>
-    </div>
-    <div id="basket-body" style="max-height:48vh;overflow-y:auto;margin-bottom:14px;"></div>
-    <div class="cite-actions" style="margin-top:0;">
-      <button class="cite-btn" id="basket-dl-ris"><span class="material-symbols-outlined">download</span>RIS</button>
-      <button class="cite-btn" id="basket-dl-bib"><span class="material-symbols-outlined">download</span>BibTeX</button>
-      <button class="cite-btn" id="basket-dl-csv"><span class="material-symbols-outlined">download</span>CSV</button>
-      <span class="spacer"></span>
-      <button class="cite-btn" id="basket-clear">Tout retirer</button>
-    </div>
-  </div>
-</div>
+<!-- La pastille et la modale du panier d'articles ont fusionne avec les signets
+     de revues : voir #collection-modal, pose avec le reste des modales. -->
 
 <script id="biblio-export-js">
 /* ──────────────────────────────────────────────────────────────────────────
@@ -11110,17 +11217,14 @@ html:not(.dark) .apc-eur-badge {
   }
 
   function syncBasket(){
-    var fab = document.getElementById('basket-fab');
-    if(fab) fab.style.display = basket.length ? 'inline-flex' : 'none';
-    var cnt = document.getElementById('basket-fab-count');
-    if(cnt) cnt.textContent = String(basket.length);
+    if(window.COLLECTION) window.COLLECTION.set('articles', basket.length);
     Array.prototype.forEach.call(document.querySelectorAll('.oa-work-link--mark'), function(btn){
       var on = inBasket(btn.getAttribute('data-work-id'));
       btn.classList.toggle('on', on);
       btn.setAttribute('aria-pressed', on ? 'true' : 'false');
       btn.title = on ? 'Retirer de ma bibliographie' : 'Ajouter à ma bibliographie';
     });
-    var modal = document.getElementById('basket-modal');
+    var modal = document.getElementById('collection-modal');
     if(modal && modal.style.display === 'flex') renderBasket();
   }
 
@@ -11186,7 +11290,7 @@ html:not(.dark) .apc-eur-badge {
   }
 
   function closeModals(){
-    ['cite-modal', 'basket-modal'].forEach(function(id){
+    ['cite-modal', 'collection-modal'].forEach(function(id){
       var m = document.getElementById(id);
       if(m) m.style.display = 'none';
     });
@@ -11210,7 +11314,7 @@ html:not(.dark) .apc-eur-badge {
     Array.prototype.forEach.call(document.querySelectorAll('.cite-close, .basket-close'), function(b){
       b.addEventListener('click', closeModals);
     });
-    ['cite-modal', 'basket-modal'].forEach(function(id){
+    ['cite-modal', 'collection-modal'].forEach(function(id){
       var m = document.getElementById(id);
       if(m) m.addEventListener('click', function(e){ if(e.target === m) closeModals(); });
     });
@@ -11221,7 +11325,7 @@ html:not(.dark) .apc-eur-badge {
     on('cite-dl-ris', function(){ if(current) download(ris(current), slug(current.title) + '.ris', 'application/x-research-info-systems'); });
     on('cite-dl-bib', function(){ if(current) download(bibtex(current), slug(current.title) + '.bib', 'application/x-bibtex'); });
 
-    on('basket-fab', function(){ renderBasket(); document.getElementById('basket-modal').style.display = 'flex'; });
+    on('collection-fab', function(){ renderBasket(); document.getElementById('collection-modal').style.display = 'flex'; });
     on('basket-dl-ris', function(){ if(basket.length) download(basket.map(ris).join('\r\n'), 'bibliographie.ris', 'application/x-research-info-systems'); });
     on('basket-dl-bib', function(){ if(basket.length) download(basket.map(bibtex).join('\n\n'), 'bibliographie.bib', 'application/x-bibtex'); });
     on('basket-dl-csv', function(){ if(basket.length) download(csv(basket), 'bibliographie.csv', 'text/csv'); });
@@ -11240,12 +11344,15 @@ html:not(.dark) .apc-eur-badge {
   window.BIBLIO = {
     toRef: toRef,
     format: format,
+    /** Les references du panier, pour l'export commun de la collection. */
+    list: function(){ return basket.slice(); },
     ris: ris,
     bibtex: bibtex,
     csv: csv,
     /** Ajoute les pastilles « Citer » et « Signet » a la barre de liens d'une notice. */
-    decorate: function(links, work){
+    decorate: function(links, work, actions){
       var ref = toRef(work);
+      var host = actions || links;
 
       var cite = document.createElement('button');
       cite.type = 'button';
@@ -11253,15 +11360,15 @@ html:not(.dark) .apc-eur-badge {
       cite.title = 'Citer cet article';
       cite.innerHTML = '<span class="material-symbols-outlined">format_quote</span>Citer';
       cite.addEventListener('click', function(){ openCite(ref); });
-      links.appendChild(cite);
+      host.appendChild(cite);
 
       var mark = document.createElement('button');
       mark.type = 'button';
       mark.className = 'oa-work-link oa-work-link--mark';
       mark.setAttribute('data-work-id', ref.id);
-      mark.innerHTML = '<span class="material-symbols-outlined">bookmark</span>Signet';
+      mark.innerHTML = '<span class="material-symbols-outlined">bookmark</span>';
       mark.addEventListener('click', function(){ toggleBasket(ref); });
-      links.appendChild(mark);
+      host.appendChild(mark);
 
       var on = inBasket(ref.id);
       mark.classList.toggle('on', on);
