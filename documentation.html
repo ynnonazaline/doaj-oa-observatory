@@ -2219,9 +2219,9 @@ si tryFetchCSV() échoue :
           «&nbsp;Réessayer&nbsp;».</li>
         <li><strong>Articles</strong> — liste paginée des publications OpenAlex&nbsp;: titre lié à OpenAlex,
           année, trois premiers auteurs, langue, sous-discipline, résumé dépliable et lien vers le texte
-          intégral lorsqu'une localisation en libre accès est connue. Les trois actions de la notice —
-          PDF, Citer, Signet — tiennent une colonne à droite, centrée sur la hauteur du texte&nbsp;; le bas
-          de la notice ne garde que les mentions, résumé, lecture en ligne et DOI.</li>
+          intégral lorsqu'une localisation en libre accès est connue. Les actions de la notice — PDF, Lire,
+          Citer, Signet — tiennent une colonne à droite, centrée sur la hauteur du texte&nbsp;; le bas de la
+          notice ne garde que les mentions, résumé dépliable et DOI.</li>
       </ul>
       <p class="note">
         <strong>Rendu en deux temps.</strong> Le bloc d'informations est rendu une première fois dès que le corpus
@@ -2261,8 +2261,9 @@ si tryFetchCSV() échoue :
       <ul>
         <li><strong>Référence seule</strong> — copie dans le presse-papiers, ou téléchargement en
           <code>.bib</code> et <code>.ris</code>, nommé d'après le titre de l'article.</li>
-        <li><strong>Panier</strong> — <code>bibliographie.bib</code>, <code>bibliographie.ris</code> et
-          <code>bibliographie.csv</code>. Le panier conserve des références neutres, pas les notices
+        <li><strong>Panier</strong> — <code>bibliographie.bib</code>, <code>bibliographie.ris</code>,
+          <code>bibliographie.csv</code> et <code>bibliographie.pdf</code>, ce dernier en APA 7, avec le
+          même bandeau que l'export des revues et le lien de chaque référence sous elle. Le panier conserve des références neutres, pas les notices
           OpenAlex entières&nbsp;: celles-ci dépasseraient vite le quota de 5&nbsp;Mo de
           <code>localStorage</code>. Il se consulte dans <a href="#ui-collection">Ma collection</a>, avec
           les revues signalées.</li>
@@ -2285,11 +2286,20 @@ si tryFetchCSV() échoue :
           <thead><tr><th scope="col">Liste</th><th scope="col">Clé <code>localStorage</code></th><th scope="col">Exports</th></tr></thead>
           <tbody>
             <tr><th scope="row">Revues</th><td><code>oa_bookmarks_v1</code></td><td><code>signets.csv</code>, <code>signets.pdf</code>, <code>signets.md</code></td></tr>
-            <tr><th scope="row">Articles</th><td><code>oa_biblio_basket_v1</code></td><td><code>bibliographie.ris</code>, <code>bibliographie.bib</code>, <code>bibliographie.csv</code></td></tr>
+            <tr><th scope="row">Articles</th><td><code>oa_biblio_basket_v1</code></td><td><code>bibliographie.ris</code>, <code>bibliographie.bib</code>, <code>bibliographie.csv</code>, <code>bibliographie.pdf</code></td></tr>
             <tr><th scope="row">Les deux</th><td>—</td><td><code>collection.md</code>&nbsp;: les revues en fiches, les articles en références APA 7</td></tr>
           </tbody>
         </table>
       </div>
+      <p class="note">
+        <strong>Ce que l'export d'une revue porte toujours.</strong> <code>getExportFields()</code> décide du
+        contenu des trois formats à la fois. Deux champs y sont inconditionnels&nbsp;: les bases où la revue
+        est référencée — les six, plus la compatibilité OAI-PMH, ou «&nbsp;Aucune base connue&nbsp;», parce
+        qu'une colonne qui disparaît d'un export à l'autre ne se compare pas&nbsp;; et les frais sous leurs
+        deux faces, le montant que la revue annonce dans sa devise et sa conversion en euros, une revue
+        diamant valant <code>0 €</code>. Le PDF les réunit dans une seule pastille,
+        «&nbsp;APC&nbsp;: 1600 EGP ≈ 27 €&nbsp;».
+      </p>
       <p class="note">
         <strong>Deux listes, un seul guichet.</strong> Les données restent séparées — une revue n'est pas une
         référence bibliographique — mais les deux pastilles flottantes d'avant, l'une à gauche pour les

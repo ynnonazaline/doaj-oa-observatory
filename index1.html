@@ -1746,6 +1746,7 @@ body{position:relative;z-index:1;background:transparent !important}
       <button class="cite-btn" id="basket-dl-ris"><span class="material-symbols-outlined">download</span>RIS</button>
       <button class="cite-btn" id="basket-dl-bib"><span class="material-symbols-outlined">download</span>BibTeX</button>
       <button class="cite-btn" id="basket-dl-csv"><span class="material-symbols-outlined">download</span>CSV</button>
+      <button class="cite-btn" id="basket-dl-pdf"><span class="material-symbols-outlined">picture_as_pdf</span>PDF</button>
       <span class="spacer"></span>
       <button class="cite-btn" id="basket-clear">Tout retirer</button>
     </div>
@@ -3724,6 +3725,8 @@ function buildDisciplineKeywordDropdown(rows){
     if(!parsed) return null;
     return toEur(parsed.amount, parsed.currency);
   }
+  /* Lu par le bloc d'export, qui vit dans un autre <script>. */
+  window.apcEurOf = apcEurOf;
   let CURRENTFILTER = null;
   let DB_FILTER = new Set(); // active DB filter ids: 'ajol' | 'crossref' | 'openalex' | 'scopus' | 'wos'
 
@@ -4976,7 +4979,8 @@ ${detail}`;
         ['Web of Science', window.inWos],
         ['Crossref', window.inCrossref],
         ['OpenAlex', window.inOpenAlex],
-        ['OpenCitations', window.inOpenCitations]
+        ['OpenCitations', window.inOpenCitations],
+        ['OAI-PMH', (i, e) => typeof window.oaiOf === 'function' && !!window.oaiOf(i, e)]
       ];
       const hits = checks.filter(([, fn]) => typeof fn === 'function' && fn(issn, eissn)).map(([name]) => name);
       return hits.join(', ');
@@ -4986,7 +4990,18 @@ ${detail}`;
       const apc = getRowValue(row, APC_KEYS);
       if (!(typeof isYes === 'function' && isYes(apc))) return 'Diamond OA (sans frais)';
       const amount = cleanValue(getRowValue(row, APC_AMOUNT_KEYS), '');
-      return amount ? `APC : ${amount}` : 'Avec frais (APC)';
+      return amount ? `APC : ${amount}` : 'Avec frais (APC), montant non renseigné';
+    }
+
+    /* Le montant du DOAJ est dans la devise de la revue : « 1000 ZAR » ne se
+       compare a rien. L'export porte donc les deux, le declare et le converti,
+       et jamais l'un sans l'autre. */
+    function getFeeEurLabel(row){
+      const apc = getRowValue(row, APC_KEYS);
+      if (!(typeof isYes === 'function' && isYes(apc))) return '0 €';
+      const eur = (typeof window.apcEurOf === 'function') ? window.apcEurOf(row) : null;
+      if (eur === null || eur === undefined) return 'Non convertible';
+      return `${Number(eur).toLocaleString('fr-FR')} €`;
     }
 
     function getDelayLabel(row){
@@ -5019,13 +5034,16 @@ ${detail}`;
         ['Langues acceptées', cleanList(getRowValue(row, LANG_KEYS))],
         ['Journal license', cleanValue(getRowValue(row, LICENSE_KEYS))],
         ['Frais de publication', getFeeLabel(row)],
+        ['Frais convertis (EUR)', getFeeEurLabel(row)],
         ['Délai de publication', getDelayLabel(row)],
         ['Author holds copyright without restrictions', cleanValue(getRowValue(row, COPYRIGHT_KEYS))],
         ['Subjects', cleanList(getRowValue(row, [COLS.subjects, ...SUBJECT_KEYS]))],
         ['Keywords', cleanList(getRowValue(row, KEYWORD_KEYS))]
       ];
-      const indexation = getIndexationLabel(row);
-      if (indexation) fields.push(["Présence dans d'autres bases", indexation]);
+      /* Toujours presente, meme vide : une colonne qui apparait et disparait
+         d'un export a l'autre ne se compare pas, et l'absence d'indexation est
+         elle-meme un resultat. */
+      fields.push(["Présence dans d'autres bases", getIndexationLabel(row) || 'Aucune base connue']);
       return fields;
     }
 
@@ -5208,6 +5226,63 @@ ${detail}`;
       return w;
     }
 
+    /* Les references du panier en PDF. Meme bandeau que l'export des revues,
+       corps en texte simple, une reference par bloc, lien cliquable dessous.
+       ponytail: police standard de jsPDF, donc latin-1 ; un titre en arabe ou
+       en amharique sortira mal, comme dans l'export des revues. */
+    function buildRefsPDF(refs, opts){
+      opts = opts || {};
+      if (!refs || !refs.length || !window.jspdf?.jsPDF || !window.BIBLIO) return;
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: 'pt', format: 'a4', compress: true });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const left = 40, maxWidth = pageWidth - 80;
+      const ACCENT = [37, 99, 235], MUTED = [100, 116, 139];
+      const now = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+      const title = opts.headerTitle || 'Ma bibliographie';
+
+      doc.setFillColor(ACCENT[0], ACCENT[1], ACCENT[2]);
+      doc.rect(0, 0, pageWidth, 72, 'F');
+      const t = textToPngDataUrl(title, 18, { bold: true, color: '#ffffff' });
+      const tH = 18 * 1.3;
+      doc.addImage(t.dataUrl, 'PNG', left, 18, tH * (t.width / t.height), tH);
+      const subtitle = `Généré le ${now} · ${refs.length} référence${refs.length > 1 ? 's' : ''} · format APA 7`;
+      const sub = textToPngDataUrl(subtitle, 10.5, { color: '#ffffff' });
+      const sH = 10.5 * 1.3;
+      doc.addImage(sub.dataUrl, 'PNG', left, 44, sH * (sub.width / sub.height), sH);
+
+      let y = 104;
+      doc.setFontSize(10.5);
+      refs.forEach((r, i) => {
+        const lines = doc.splitTextToSize(`${i + 1}.  ${window.BIBLIO.format('APA 7', r)}`, maxWidth);
+        const height = lines.length * 14 + (r.url ? 16 : 0) + 10;
+        if (y + height > pageHeight - 56) { doc.addPage(); y = 56; }
+        doc.setTextColor(17, 24, 39);
+        doc.text(lines, left, y);
+        y += lines.length * 14;
+        if (r.url) {
+          doc.setFontSize(9);
+          doc.setTextColor(ACCENT[0], ACCENT[1], ACCENT[2]);
+          doc.textWithLink(r.url, left + 14, y + 3, { url: r.url });
+          doc.setFontSize(10.5);
+          y += 16;
+        }
+        y += 10;
+      });
+
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let p = 1; p <= pageCount; p++) {
+        doc.setPage(p);
+        doc.setFontSize(8);
+        doc.setTextColor(MUTED[0], MUTED[1], MUTED[2]);
+        doc.text('Observatoire des revues africaines en libre accès  ·  africanjournals.azilan.me', left, pageHeight - 24);
+        doc.text(`${p} / ${pageCount}`, pageWidth - left, pageHeight - 24, { align: 'right' });
+      }
+      doc.save(opts.filename || 'bibliographie.pdf');
+    }
+    window.buildRefsPDF = buildRefsPDF;
+
     function buildJournalsPDF(rows, opts){
       const headerTitle = opts.headerTitle, criteria = opts.criteriaLines || [], filename = opts.filename;
       if (!rows.length || !window.jspdf?.jsPDF) return;
@@ -5279,7 +5354,13 @@ ${detail}`;
         y = renderJournalTitlePdf(doc, titleText, url, left, y, maxWidth, pageHeight, 13);
 
         doc.setFontSize(8.5);
-        const badges = [get('Langues acceptées'), get('Journal license'), get('Frais de publication')]
+        /* Les frais portent toujours les deux montants : celui que la revue
+           annonce, dans sa devise, et sa conversion en euros. */
+        const feeDeclared = get('Frais de publication');
+        const feeEur = get('Frais convertis (EUR)');
+        const fee = (feeDeclared.startsWith('APC') && feeEur && feeEur !== 'Non convertible')
+          ? `${feeDeclared}  ≈ ${feeEur}` : feeDeclared;
+        const badges = [get('Langues acceptées'), get('Journal license'), fee]
           .filter(v => v && v !== 'Non renseigné');
         if (get('Author holds copyright without restrictions') === 'Yes') badges.push('Copyright auteur conservé');
         let bx = left;
@@ -7466,7 +7547,7 @@ ${detail}`;
       htmlLink.href = htmlUrl; htmlLink.target = '_blank'; htmlLink.rel = 'noopener';
       htmlLink.title = 'Lire l\'article en ligne';
       htmlLink.innerHTML = '<span class="material-symbols-outlined">menu_book</span><span>Lire</span>';
-      links.insertBefore(htmlLink, links.firstChild);
+      actions.appendChild(htmlLink);
     }
 
     var doi = work.doi ? String(work.doi).replace(/^https?:\/\/(dx\.)?doi\.org\//, '') : null;
@@ -11329,6 +11410,11 @@ html:not(.dark) .apc-eur-badge {
     on('basket-dl-ris', function(){ if(basket.length) download(basket.map(ris).join('\r\n'), 'bibliographie.ris', 'application/x-research-info-systems'); });
     on('basket-dl-bib', function(){ if(basket.length) download(basket.map(bibtex).join('\n\n'), 'bibliographie.bib', 'application/x-bibtex'); });
     on('basket-dl-csv', function(){ if(basket.length) download(csv(basket), 'bibliographie.csv', 'text/csv'); });
+    on('basket-dl-pdf', function(){
+      if(basket.length && typeof window.buildRefsPDF === 'function'){
+        window.buildRefsPDF(basket, { headerTitle: 'Ma bibliographie', filename: 'bibliographie.pdf' });
+      }
+    });
     on('basket-clear', function(){
       if(basket.length && confirm('Retirer les ' + basket.length + ' articles de votre bibliographie ?')){
         basket = []; saveBasket(); syncBasket(); renderBasket();
