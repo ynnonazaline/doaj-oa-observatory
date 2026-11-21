@@ -1292,14 +1292,15 @@ mark {
     <h1>Observatoire des revues africaines en libre accès</h1>
     <p class="standfirst">
       Application monofichier à rendu client, adossée à un Worker Cloudflare qui met en cache le corpus
-      du DOAJ et son enrichissement. Ce document décrit l'architecture, les six bases d'indexation,
-      les visualisations, la fiche de revue et le fonctionnement des tâches planifiées.
+      du DOAJ et son enrichissement. Ce document décrit l'architecture, le schéma de métadonnées,
+      les sept critères d'indexation, les visualisations, la fiche de revue, les outils bibliographiques
+      et le fonctionnement des deux tâches planifiées.
     </p>
     <dl class="doc-meta">
-      <div><dt>Version</dt><dd>V5.2</dd></div>
+      <div><dt>Version</dt><dd>V6.0</dd></div>
       <div><dt>Auteur</dt><dd>Awuvé Innocent Azilan</dd></div>
       <div><dt>Licence</dt><dd>Application CC BY-NC 4.0</dd></div>
-      <div><dt>Mise à jour</dt><dd>13 novembre 2026</dd></div>
+      <div><dt>Mise à jour</dt><dd>21 novembre 2026</dd></div>
     </dl>
   </div>
 </div>
@@ -1313,7 +1314,7 @@ mark {
         <li><a href="#vue-ensemble">Vue d'ensemble</a></li>
         <li><a href="#fichiers">Structure des fichiers</a></li>
         <li><a href="#donnees">Architecture des données</a></li>
-        <li><a href="#colonnes">Colonnes de données</a></li>
+        <li><a href="#schema">Schéma de métadonnées</a></li>
         <li><a href="#css">Architecture CSS</a></li>
         <li><a href="#interface">Sections de l'interface</a></li>
         <li><a href="#dataviz">Catalogue des visualisations</a></li>
@@ -1333,15 +1334,16 @@ mark {
     <section id="vue-ensemble">
       <h2>Vue d'ensemble</h2>
       <p>
-        <strong>Application web monofichier</strong> (<code>index.html</code>, environ 9&nbsp;100 lignes)
+        <strong>Application web monofichier</strong> (<code>index1.html</code>, environ 11&nbsp;300 lignes)
         à rendu entièrement côté client, sans framework ni étape de compilation. Elle consomme les métadonnées
-        des revues africaines en libre accès publiées par le DOAJ, les croise avec six bases d'indexation,
+        des revues africaines en libre accès publiées par le DOAJ, les croise avec sept critères d'indexation,
         et les présente sous forme de tableau de bord&nbsp;: visualisations, catalogue filtrable, moteur de
         recommandation et fiche individuelle par revue.
       </p>
       <p>
         Le même fichier sert deux routes&nbsp;: le catalogue à la racine, et une
-        <strong>fiche de revue</strong> sur <code>/&lt;ISSN&gt;</code>. Le routage se fait en JavaScript
+        <strong>fiche de revue</strong> sur <code>/&lt;ISSN&gt;</code> ou
+        <code>/openaccess/&lt;identifiant&gt;</code>. Le routage se fait en JavaScript
         à partir de <code>location.pathname</code>&nbsp;; sur la route fiche, le catalogue n'est jamais construit.
       </p>
       <div class="bloc schema">
@@ -1349,16 +1351,19 @@ mark {
 <pre><code>Navigateur — index.html (client, sans framework)
   |
   |-- Corpus          --&gt; Worker Cloudflare /csv        --&gt; KV (JSON pré-filtré)
-  |-- Enrichissement  --&gt; Worker Cloudflare /enrichment --&gt; KV (Crossref, OpenAlex, OpenCitations)
+  |-- Enrichissement  --&gt; Worker Cloudflare /enrichment --&gt; KV (Crossref, OpenAlex, OpenCitations, OAI-PMH)
   |-- Cache local     --&gt; Cache API (CacheStorage)
   |-- Indexation      --&gt; ajol_journals.csv, scopus_issns.json, wos_issns.json
   |-- À la demande    --&gt; api.crossref.org, api.openalex.org, opencitations.net
   |-- Synthèse IA     --&gt; Worker Cloudflare /topics     --&gt; Workers AI (Llama 3.1 8B)
   |-- Cartographie    --&gt; Leaflet + tuiles Jawg / OpenStreetMap
+  |-- Bibliographie   --&gt; notice OpenAlex --&gt; référence neutre --&gt; APA, MLA, Chicago, ISO 690, BibTeX
+  |-- Audience        --&gt; counterscale.ynnonazaline.workers.dev/tracker.js
   '-- Taux de change  --&gt; open.er-api.com
 
 Worker Cloudflare (worker/worker.js)
-  |-- Cron hebdomadaire --&gt; corpus, agrégat mondial, tranche Crossref
+  |-- Cron dominical        --&gt; corpus, agrégat mondial, tranche Crossref
+  |-- Cron au quart d'heure --&gt; tranche du balayage OAI-PMH, 8 revues par passage
   '-- /report-oa, /report-oc, /report-cr &lt;-- les navigateurs renvoient ce qu'ils ont résolu</code></pre>
       </div>
       <p class="note">
@@ -1368,6 +1373,14 @@ Worker Cloudflare (worker/worker.js)
         renvoient leurs résultats au Worker, qui les mutualise dans son cache. Le cron ne fait que
         reconstruire le corpus et rafraîchir une petite tranche tournante.
       </p>
+      <p class="note">
+        <strong>Révision V6.0, 21 novembre 2026.</strong> Trois fonctions entrées en service après la V5.2
+        sont décrites ici pour la première fois&nbsp;: la compatibilité OAI-PMH et son balayage, l'export
+        bibliographique avec son panier de références, et la mesure d'audience. Le
+        <a href="#schema">schéma de métadonnées</a> est neuf, et la liste des colonnes transportées a été
+        reprise sur <code>NEEDED_COLS</code>, qui en compte désormais vingt-huit. Sauf mention contraire,
+        les volumes cités restent ceux relevés le 13 novembre 2026.
+      </p>
     </section>
 
     <section id="fichiers">
@@ -1375,9 +1388,11 @@ Worker Cloudflare (worker/worker.js)
       <div class="bloc schema">
         <div class="bloc__bar"><span class="bloc__label">Dépôt</span></div>
 <pre><code>OA/
-|-- index.html                    # Application complète — HTML + CSS + JS inline
+|-- index1.html                   # Application complète — HTML + CSS + JS inline (fichier servi)
 |-- index-new.html                # Carte mondiale, alimentée par /csv/world
 |-- documentation.html            # Ce document
+|-- documentation.md              # Jumeau Markdown, resté en V4.1
+|-- test_biblio.js                # Vérifie les cinq formats de citation — node test_biblio.js
 |-- ajol_journals.csv             # Index AJOL (jeu de données Zenodo)
 |-- apc_african_journals.csv      # APC en devises d'origine
 |-- apc_african_journals_eur.csv  # APC convertis en euros
@@ -1388,8 +1403,16 @@ Worker Cloudflare (worker/worker.js)
 |   '-- update-index-lists.yml    # Exécute ce script chaque lundi
 '-- worker/
     |-- worker.js                 # Worker Cloudflare — cache et enrichissement
-    '-- wrangler.toml             # Déploiement, binding KV, binding IA, cron</code></pre>
+    '-- wrangler.toml             # Déploiement, bindings KV et IA, deux crons</code></pre>
       </div>
+      <p class="note">
+        <strong>Le fichier servi s'appelle <code>index1.html</code>.</strong> Le reste de ce document écrit
+        <code>index.html</code>, qui est le nom de la route et du fichier historique&nbsp;; c'est
+        <code>index1.html</code> qui est versionné et déployé. Le dossier de travail garde en plus sept
+        copies non suivies — <code>index2.html</code>, <code>index - Copie.html</code>,
+        <code>index - sauvergarde 14112026.html</code>, <code>index.html.bak</code> et les autres —
+        dont aucune n'est déployée.
+      </p>
     </section>
 
     <section id="donnees">
@@ -1407,9 +1430,9 @@ Worker Cloudflare (worker/worker.js)
       |
       v
 Worker : pré-filtre ligne à ligne sur 54 pays africains  --&gt;  environ 1 000 lignes
-      |  puis lecteur RFC 4180 maison, projection de 24 colonnes demandées
+      |  puis lecteur RFC 4180 maison, projection de 28 colonnes demandées
       v
-KV african_journals  (environ 1 Mo, 956 revues, 22 colonnes servies)
+KV african_journals  (environ 1 Mo, 956 revues, 28 colonnes servies)
       |
       v
 GET https://doaj-african-cache.ynnonazaline.workers.dev/csv
@@ -1423,16 +1446,17 @@ index.html : fetch avec AbortController, délai de 90 s
       <p><strong>Points d'entrée du Worker&nbsp;:</strong></p>
       <div class="tw tw--large">
         <table>
-          <caption>Routes exposées par <code>doaj-african-cache.ynnonazaline.workers.dev</code>, au 13 novembre 2026.</caption>
+          <caption>Routes exposées par <code>doaj-african-cache.ynnonazaline.workers.dev</code>, au 21 novembre 2026.</caption>
           <thead>
             <tr><th scope="col">Route</th><th scope="col">Méthode</th><th scope="col">Rôle</th></tr>
           </thead>
           <tbody>
             <tr><th scope="row"><code>/csv</code> ou <code>/</code></th><td>GET</td><td>Corpus africain depuis KV. Si KV est vide, reconstruction en arrière-plan et <code>503</code> immédiat.</td></tr>
             <tr><th scope="row"><code>/csv/world</code></th><td>GET</td><td>Agrégat mondial par pays, pour <code>index-new.html</code>. Construit à la demande si KV est vide.</td></tr>
-            <tr><th scope="row"><code>/enrichment</code></th><td>GET</td><td>Compteurs Crossref, sources OpenAlex et présences OpenCitations par ISSN. Mise en cache navigateur de 24 heures.</td></tr>
+            <tr><th scope="row"><code>/enrichment</code></th><td>GET</td><td>Compteurs Crossref, sources OpenAlex, présences OpenCitations et entrepôts OAI-PMH par ISSN. Cache navigateur d'une heure, puis <code>stale-while-revalidate</code> pendant vingt-trois heures.</td></tr>
             <tr><th scope="row"><code>/status</code></th><td>GET</td><td>Métadonnées du cache africain&nbsp;: <code>cachedAt</code>, <code>count</code>, <code>totalRows</code>.</td></tr>
             <tr><th scope="row"><code>/refresh?secret=…</code></th><td>GET</td><td>Reconstruction manuelle du corpus puis de l'enrichissement. Protégée par un secret.</td></tr>
+            <tr><th scope="row"><code>/oai-sweep?secret=…</code></th><td>GET</td><td>Une tranche du balayage OAI-PMH à la demande, sans attendre le cron. Même secret que <code>/refresh</code>&nbsp;; chaque appel avance le curseur de huit revues.</td></tr>
             <tr><th scope="row"><code>/report-oa</code></th><td>POST</td><td>Le navigateur renvoie les sources OpenAlex qu'il a résolues.</td></tr>
             <tr><th scope="row"><code>/report-oc</code></th><td>POST</td><td>Idem pour les présences OpenCitations.</td></tr>
             <tr><th scope="row"><code>/report-cr</code></th><td>POST</td><td>Idem pour les compteurs Crossref. N'envoie que les nouveautés.</td></tr>
@@ -1486,10 +1510,12 @@ si tryFetchCSV() échoue :
       --&gt; afficher #csv-modal : Réessayer, Télécharger le CSV, Dépôt manuel</code></pre>
       </div>
 
-      <h3 id="donnees-indexation">Les six bases d'indexation</h3>
+      <h3 id="donnees-indexation">Les sept critères d'indexation</h3>
       <p>
-        Chaque revue est confrontée à six référentiels. Cinq d'entre eux pilotent un interrupteur de la barre
-        <code>#db-filter-bar</code>, sous le catalogue&nbsp;; le sixième n'apparaît que dans le graphe d'indexation.
+        Chaque revue est confrontée à sept critères&nbsp;: six bases d'indexation, et une capacité technique
+        de la revue elle-même, la présence d'un entrepôt OAI-PMH moissonnable. Les sept pilotent chacun un
+        interrupteur de la barre <code>#db-filter-bar</code>, sous le catalogue&nbsp;; le
+        <a href="#viz-graph">réseau d'indexation</a>, lui, ne dessine que les six bases.
       </p>
       <div class="tw tw--large">
         <table>
@@ -1534,7 +1560,13 @@ si tryFetchCSV() échoue :
               <th scope="row">OpenCitations</th>
               <td><code>opencitations.net</code>, mutualisé par <code>/enrichment</code></td>
               <td>Résolution par lots côté navigateur</td>
-              <td>— (graphe uniquement)</td>
+              <td><code>#toggle-opencitations</code></td>
+            </tr>
+            <tr>
+              <th scope="row">OAI-PMH</th>
+              <td>La revue elle-même, sondée par le Worker et servie par <code>/enrichment</code></td>
+              <td>Cache au démarrage, vers <code>OAI_MAP</code></td>
+              <td><code>#toggle-oai</code></td>
             </tr>
           </tbody>
         </table>
@@ -1586,6 +1618,63 @@ si tryFetchCSV() échoue :
         afficher aucune. Les quatre autres listes suivent la même règle.
       </p>
 
+      <h3 id="donnees-oai">Compatibilité OAI-PMH</h3>
+      <p>
+        Septième critère, et le seul qui ne soit pas une base&nbsp;: il ne dit pas où la revue est indexée,
+        mais si sa plateforme expose un entrepôt OAI-PMH moissonnable. Une revue moissonnable peut entrer
+        dans un réservoir tiers sans démarche de l'éditeur&nbsp;; une revue qui ne l'est pas en reste dehors.
+      </p>
+      <p>
+        <code>validator.oaipmh.com</code> n'expose pas d'API publique gratuite. La sonde est donc faite par
+        le Worker lui-même, avec un seul verbe, <code>Identify</code>, sur une poignée d'URL candidates
+        déduites de <code>Journal URL</code>&nbsp;:
+      </p>
+      <div class="bloc">
+        <div class="bloc__bar"><span class="bloc__label">oaiCandidates(url)</span></div>
+<pre><code>&lt;url&gt;/oai                      # OJS : .../index.php/&lt;revue&gt;/oai
+&lt;racine OJS&gt;/oai               # page profonde d'un OJS, remontée à /index.php/&lt;revue&gt;
+&lt;url&gt;/oai/request              # DSpace, EPrints
+&lt;origine&gt;/index.php/index/oai  # OJS, portail multi-revues
+&lt;origine&gt;/oai
+&lt;origine&gt;/oai/request</code></pre>
+      </div>
+      <p>
+        Une candidate est retenue si sa réponse contient <code>&lt;Identify&gt;</code> et la chaîne
+        <code>OAI-PMH</code>. Le Worker en retire quatre champs&nbsp;: l'adresse de l'entrepôt, son nom
+        (<code>repositoryName</code>), sa granularité de date et son plus ancien horodatage. La première
+        candidate qui répond arrête la recherche.
+      </p>
+      <div class="tw tw--large">
+        <table>
+          <caption>Garde-fous du balayage, dans <code>worker.js</code>.</caption>
+          <thead><tr><th scope="col">Constante</th><th scope="col">Valeur</th><th scope="col">Raison</th></tr></thead>
+          <tbody>
+            <tr><th scope="row"><code>OAI_PER_RUN</code></th><td>8 revues</td><td>Six candidates au pire, soit 48 sous-requêtes&nbsp;: la limite d'une invocation.</td></tr>
+            <tr><th scope="row"><code>OAI_TIMEOUT_MS</code></th><td>6 000 ms</td><td>Un site injoignable ne doit pas consommer l'invocation entière.</td></tr>
+            <tr><th scope="row"><code>OAI_MAX_BYTES</code></th><td>16 384 octets</td><td>Une URL candidate peut renvoyer une page HTML de plusieurs méga-octets&nbsp;; la lecture est tronquée.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Le balayage a son propre cron, au quart d'heure, pour disposer seul du budget de sous-requêtes.
+        Les revues d'une tranche sont sondées en parallèle, leurs candidates en série. Le corpus complet,
+        environ 960 revues, est couvert en une trentaine d'heures, puis la boucle reprend. Le curseur est
+        conservé dans <code>oai_cursor</code>.
+      </p>
+      <p class="note">
+        <strong>Trois états, pas deux.</strong> Une fiche d'entrepôt signifie «&nbsp;moissonnable&nbsp;»,
+        <code>false</code> «&nbsp;toutes les candidates ont répondu sans entrepôt&nbsp;», et une clé absente
+        «&nbsp;pas encore sondée&nbsp;». Le filtre laisse passer ce troisième cas, comme il le fait pour une
+        résolution Crossref en attente. Si le balayage ne renvoie rien du tout,
+        <code>markDbUnavailable('oai')</code> éteint l'interrupteur&nbsp;: sans cela, le catalogue entier
+        s'afficherait sous une étiquette «&nbsp;OAI-PMH&nbsp;».
+      </p>
+      <p class="note">
+        <strong>Le balayage vit dans sa propre clé KV.</strong> <code>oai_cache</code> est écrit toutes les
+        quinze minutes&nbsp;; le mêler à <code>enrichment_cache</code> écraserait les renvois des visiteurs.
+        Les deux ne sont recollés qu'à la lecture, dans la réponse de <code>/enrichment</code>.
+      </p>
+
       <h3 id="donnees-enrichissement">Cache d'enrichissement et boucle de renvoi</h3>
       <p>
         <code>/enrichment</code> sert un objet unique qui réunit les trois bases résolues dynamiquement.
@@ -1595,12 +1684,19 @@ si tryFetchCSV() échoue :
       <div class="bloc">
         <div class="bloc__bar"><span class="bloc__label">Forme de la réponse</span></div>
 <pre><code>{
-  "generated": "2026-11-12T21:10:36.742Z",
-  "journals": 956,
+  "generated":     "2026-11-12T21:10:36.742Z",
+  "journals":      956,
+  "refreshedFrom": 120,
+  "refreshed":     20,
   "foundCrossref": 833,
+  "foundOpenalex": 712,
   "crossref":      { "2071-4602": 427, "0303-1896": null },
   "openalex":      { "2071-4602": { "id": "https://openalex.org/S…", "works_count": 427 } },
-  "opencitations": { "2071-4602": true }
+  "opencitations": { "2071-4602": true },
+  "oai":           { "2071-4602": { "url": "https://…/index.php/revue/oai",
+                                    "name": "Revue", "granularity": "YYYY-MM-DD",
+                                    "earliest": "2012-01-01" },
+                     "0303-1896": false }
 }</code></pre>
       </div>
       <p>
@@ -1637,59 +1733,284 @@ si tryFetchCSV() échoue :
       </p>
     </section>
 
-    <section id="colonnes">
-      <h2>Colonnes de données</h2>
+    <section id="schema">
+      <h2>Schéma de métadonnées</h2>
       <p>
-        <code>COLS</code> associe un alias court au nom exact de la colonne DOAJ. Le Worker, lui, projette
-        <code>NEEDED_COLS</code>. Les deux listes ne se recouvrent pas entièrement, et l'écart a des
-        conséquences visibles.
+        Le contrat de données entre le Worker et l'application. Chaque route sert un objet de forme stable&nbsp;;
+        ce qui suit en donne les champs, leur type et leur provenance. Une colonne du DOAJ absente de ce schéma
+        n'atteint jamais le navigateur, même si <code>index.html</code> la lit.
+      </p>
+
+      <h3 id="schema-conventions">Conventions communes</h3>
+      <div class="tw tw--large">
+        <table>
+          <thead><tr><th scope="col">Convention</th><th scope="col">Règle</th></tr></thead>
+          <tbody>
+            <tr>
+              <th scope="row">Tout est chaîne</th>
+              <td>Aucun champ du corpus n'est typé&nbsp;: ni nombre, ni booléen, ni date. Le CSV du DOAJ est
+                transporté tel quel et converti à l'affichage. Un champ numérique vide vaut <code>""</code>,
+                pas <code>0</code>.</td>
+            </tr>
+            <tr>
+              <th scope="row">Trois formes d'absence</th>
+              <td><code>""</code> dans le corpus&nbsp;: la colonne existe, la revue ne la renseigne pas.
+                <code>null</code> dans l'enrichissement&nbsp;: la requête n'a pas abouti, donc on ne sait pas.
+                Clé absente dans le balayage OAI-PMH&nbsp;: la revue n'a pas encore été sondée. Les trois ne
+                se confondent pas, et les filtres les traitent différemment.</td>
+            </tr>
+            <tr>
+              <th scope="row">Valeurs multiples</th>
+              <td>Dans un même champ, séparées par <code>,</code> ou par <code>;</code> selon la colonne.
+                <code>splitMulti()</code> ramène les deux à une seule liste.</td>
+            </tr>
+            <tr>
+              <th scope="row">ISSN</th>
+              <td>Clé de jointure de tout le reste. Normalisé en <code>NNNN-NNNN</code> par
+                <code>normIssnW()</code> dans le Worker et <code>_normIssn()</code> dans l'application. Une
+                revue est cherchée d'abord par son EISSN, puis par son ISSN imprimé. Les routes
+                <code>/report-*</code> rejettent toute clé qui ne respecte pas
+                <code>^\d{4}-[\dXx]{4}$</code>.</td>
+            </tr>
+            <tr>
+              <th scope="row">Booléens du DOAJ</th>
+              <td><code>Yes</code> ou <code>No</code>, en anglais et en chaîne.</td>
+            </tr>
+            <tr>
+              <th scope="row">Dates</th>
+              <td>Les colonnes du DOAJ donnent <code>AAAA-MM-JJ</code> ou une année seule selon le champ. Les
+                horodatages produits par le Worker sont en ISO 8601 UTC.</td>
+            </tr>
+            <tr>
+              <th scope="row">Pays</th>
+              <td>Nom anglais, passé par <code>canonicalCountry()</code>, qui ne corrige que les diacritiques
+                connus&nbsp;: <em>Cote d'Ivoire</em> vers <em>Côte d'Ivoire</em>, <em>Sao Tome and
+                Principe</em> vers <em>São Tomé and Príncipe</em>. C'est ce nom, et non un code ISO, qui sert
+                de clé dans l'agrégat mondial.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="colonnes">Enregistrement de revue — <code>GET /csv</code></h3>
+      <p>
+        Un tableau d'objets. Les clés sont les <strong>noms exacts des colonnes du DOAJ</strong>, pas des
+        alias&nbsp;: c'est <code>COLS</code>, dans <code>index.html</code>, qui fait la traduction, et
+        <code>NEEDED_COLS</code>, dans le Worker, qui décide de ce qui est transporté. Vingt-huit colonnes
+        sont demandées, vingt-neuf alias les lisent.
       </p>
       <div class="tw tw--large">
         <table>
-          <caption>Correspondance vérifiée sur l'export DOAJ du 12 octobre 2026, qui compte 52 colonnes.</caption>
-          <thead><tr><th scope="col">Alias</th><th scope="col">Colonne DOAJ</th><th scope="col" class="c">Servie</th></tr></thead>
+          <caption>Correspondance relevée sur <code>worker.js</code> et <code>index1.html</code> au 21 novembre 2026. L'export DOAJ compte 52 colonnes.</caption>
+          <thead><tr><th scope="col">Alias</th><th scope="col">Colonne DOAJ</th><th scope="col">Forme et valeurs</th></tr></thead>
           <tbody>
-            <tr><th scope="row"><code>title</code></th><td>Journal title</td><td class="c"><span class="oui">oui</span></td></tr>
-            <tr><th scope="row"><code>issn</code>, <code>eissn</code></th><td>Journal ISSN (print version), Journal EISSN (online version)</td><td class="c"><span class="oui">oui</span></td></tr>
-            <tr><th scope="row"><code>url</code>, <code>doajUrl</code></th><td>Journal URL, URL in DOAJ</td><td class="c"><span class="oui">oui</span></td></tr>
-            <tr><th scope="row"><code>langs</code></th><td>Languages in which the journal accepts manuscripts</td><td class="c"><span class="oui">oui</span></td></tr>
-            <tr><th scope="row"><code>license</code></th><td>Journal license</td><td class="c"><span class="oui">oui</span></td></tr>
-            <tr><th scope="row"><code>country</code>, <code>countryOtherOrg</code></th><td>Country of publisher, Country of other organisation</td><td class="c"><span class="oui">oui</span></td></tr>
-            <tr><th scope="row"><code>weeks</code></th><td>Average number of weeks between article submission and publication</td><td class="c"><span class="oui">oui</span></td></tr>
-            <tr><th scope="row"><code>subjects</code>, <code>keywords</code></th><td>Subjects, Keywords</td><td class="c"><span class="oui">oui</span></td></tr>
-            <tr><th scope="row"><code>opensince</code></th><td>When did the journal start to publish all content using an open license?</td><td class="c"><span class="oui">oui</span></td></tr>
-            <tr><th scope="row"><code>addedon</code>, <code>mostRecent</code></th><td>Added on Date, Most Recent Article Added</td><td class="c"><span class="oui">oui</span></td></tr>
-            <tr><th scope="row"><code>reviewprocess</code></th><td>Review process</td><td class="c"><span class="oui">oui</span></td></tr>
-            <tr><th scope="row"><code>authorCopyright</code></th><td>Author holds copyright without restrictions</td><td class="c"><span class="oui">oui</span></td></tr>
-            <tr><th scope="row"><code>apc</code>, <code>apcAmount</code></th><td>APC, APC amount</td><td class="c"><span class="oui">oui</span></td></tr>
-            <tr><th scope="row"><code>preservation</code>, <code>preservationNL</code></th><td>Preservation Services, Preservation Service: national library</td><td class="c"><span class="oui">oui</span></td></tr>
-            <tr><th scope="row"><code>persistentIds</code></th><td>Persistent article identifiers</td><td class="c"><span class="oui">oui</span></td></tr>
-            <tr><th scope="row"><code>publisher</code></th><td>Publisher</td><td class="c"><span class="non">non</span></td></tr>
-            <tr><th scope="row"><code>licenseAttributes</code>, <code>licenseTermsUrl</code></th><td>License attributes, URL for license terms</td><td class="c"><span class="non">non</span></td></tr>
-            <tr><th scope="row"><code>reviewProcessUrl</code></th><td>Review process information URL</td><td class="c"><span class="non">non</span></td></tr>
-            <tr><th scope="row"><code>apcInfoUrl</code></th><td>APC information URL</td><td class="c"><span class="non">non</span></td></tr>
-            <tr><th scope="row"><code>numArticles</code></th><td>Number of Article Records</td><td class="c"><span class="non">non</span></td></tr>
-            <tr><th scope="row"><code>doi</code></th><td>La colonne n'existe plus dans l'export DOAJ</td><td class="c"><span class="non">non</span></td></tr>
-            <tr><th scope="row"><code>apcCurrency</code></th><td>Fusionnée dans «&nbsp;APC amount&nbsp;», sous la forme <code>150 USD</code></td><td class="c"><span class="non">non</span></td></tr>
+            <tr><th scope="row"><code>title</code></th><td>Journal title</td><td>Chaîne libre. Le seul champ toujours renseigné.</td></tr>
+            <tr><th scope="row"><code>issn</code>, <code>eissn</code></th><td>ISSN, EISSN</td><td><code>NNNN-NNNN</code>. Au moins l'un des deux&nbsp;; souvent un seul.</td></tr>
+            <tr><th scope="row"><code>publisher</code></th><td>Publisher</td><td>Chaîne libre, non normalisée&nbsp;: un même éditeur y apparaît sous plusieurs graphies.</td></tr>
+            <tr><th scope="row"><code>url</code></th><td>Journal URL</td><td>URL absolue. Racine du balayage OAI-PMH.</td></tr>
+            <tr><th scope="row"><code>doajUrl</code></th><td>URL in DOAJ</td><td>URL absolue vers la fiche DOAJ.</td></tr>
+            <tr><th scope="row"><code>langs</code></th><td>Languages in which the journal accepts manuscripts</td><td>Liste&nbsp;: <code>English, French</code>. Nourrit les graphiques de langues et le régime mono ou multilingue.</td></tr>
+            <tr><th scope="row"><code>license</code></th><td>Journal license</td><td>Liste de sigles&nbsp;: <code>CC BY</code>, <code>CC BY-NC-ND</code>.</td></tr>
+            <tr><th scope="row"><code>licenseAttributes</code></th><td>License attributes</td><td>Liste d'attributs déclarés par la revue.</td></tr>
+            <tr><th scope="row"><code>licenseTermsUrl</code></th><td>URL for license terms</td><td>URL du texte de la licence.</td></tr>
+            <tr><th scope="row"><code>country</code></th><td>Country of publisher</td><td>Nom anglais du pays. C'est ce champ qui décide de l'appartenance au corpus.</td></tr>
+            <tr><th scope="row"><code>countryOtherOrg</code></th><td>Country of other organisation</td><td>Liste de pays. Un seul pays africain y suffit à faire entrer la revue dans le corpus.</td></tr>
+            <tr><th scope="row"><code>weeks</code></th><td>Average number of weeks between article submission and publication</td><td>Entier en semaines, en chaîne.</td></tr>
+            <tr><th scope="row"><code>subjects</code></th><td>Subjects</td><td>Liste de sujets, classification du DOAJ.</td></tr>
+            <tr><th scope="row"><code>keywords</code></th><td>Keywords</td><td>Liste libre. Source du nuage de mots-clés.</td></tr>
+            <tr><th scope="row"><code>opensince</code></th><td>When did the journal start to publish all content using an open license?</td><td>Année sur quatre chiffres.</td></tr>
+            <tr><th scope="row"><code>addedon</code></th><td>Added on Date</td><td>Date d'entrée au DOAJ, ISO 8601. Source des entrées mensuelles.</td></tr>
+            <tr><th scope="row"><code>mostRecent</code></th><td>Most Recent Article Added</td><td>Date du dernier article indexé par le DOAJ.</td></tr>
+            <tr><th scope="row"><code>numArticles</code></th><td>Number of Article Records</td><td>Entier en chaîne&nbsp;: articles connus du DOAJ, à ne pas confondre avec le compte Crossref ou OpenAlex.</td></tr>
+            <tr><th scope="row"><code>reviewprocess</code></th><td>Review process</td><td>Liste&nbsp;: <code>Double anonymous peer review</code>, <code>Editorial review</code>.</td></tr>
+            <tr><th scope="row"><code>reviewProcessUrl</code></th><td>Review process information URL</td><td>URL de la page décrivant l'évaluation.</td></tr>
+            <tr><th scope="row"><code>authorCopyright</code></th><td>Author holds copyright without restrictions</td><td><code>Yes</code> ou <code>No</code>.</td></tr>
+            <tr><th scope="row"><code>apc</code></th><td>APC</td><td><code>Yes</code> ou <code>No</code>. Pilote la pastille de frais et le modèle diamant.</td></tr>
+            <tr><th scope="row"><code>apcAmount</code></th><td>APC amount</td><td>Montant <strong>et</strong> devise dans le même champ&nbsp;: <code>2000 USD</code>, parfois <code>1100 USD; 740 GBP</code>. <code>splitApcAmount()</code> ne retient que la première paire.</td></tr>
+            <tr><th scope="row"><code>apcInfoUrl</code></th><td>APC information URL</td><td>URL de la page des frais.</td></tr>
+            <tr><th scope="row"><code>preservation</code></th><td>Preservation Services</td><td>Liste&nbsp;: <code>CLOCKSS</code>, <code>LOCKSS</code>, <code>PKP PN</code>.</td></tr>
+            <tr><th scope="row"><code>preservationNL</code></th><td>Preservation Service: national library</td><td>Nom de la bibliothèque nationale dépositaire.</td></tr>
+            <tr><th scope="row"><code>persistentIds</code></th><td>Persistent article identifiers</td><td>Liste&nbsp;: <code>DOI</code>, <code>Handle</code>, <code>ARK</code>.</td></tr>
+            <tr><th scope="row"><code>apcCurrency</code></th><td><span class="non">non servie</span> — <em>APC amount currency</em> a été retirée de l'export DOAJ</td><td>L'alias subsiste dans <code>COLS</code> et vaut toujours <code>""</code>. La devise se lit dans <code>apcAmount</code>.</td></tr>
           </tbody>
         </table>
       </div>
       <p class="note">
-        <strong>Six colonnes manquent au transport.</strong> <code>Publisher</code>,
-        <code>License attributes</code>, <code>URL for license terms</code>,
-        <code>Review process information URL</code>, <code>APC information URL</code> et
-        <code>Number of Article Records</code> existent dans le CSV du DOAJ, sont lues par
-        <code>index.html</code>, mais ne figurent pas dans <code>NEEDED_COLS</code>&nbsp;: elles n'atteignent
-        jamais le navigateur. Sur la fiche de revue, les lignes «&nbsp;Éditeur&nbsp;», «&nbsp;Texte de la licence&nbsp;»
-        et «&nbsp;Articles indexés&nbsp;» sont donc systématiquement absentes. Les ajouter à
-        <code>NEEDED_COLS</code> puis reconstruire le cache suffirait.
+        <strong>Le DOAJ a perdu deux colonnes.</strong> L'export est passé de 54 à 52 colonnes&nbsp;:
+        <code>DOI</code> et <code>APC amount currency</code> n'existent plus. La première a fait retirer un
+        critère du recommandateur, la seconde est désormais fondue dans <code>APC amount</code>. La détection
+        de colonnes du Worker travaille en cascade — égalité stricte, puis insensible à la casse, puis
+        sous-chaîne — ce qui absorbe les renommages mineurs d'un export à l'autre, mais ne peut rien pour une
+        colonne supprimée.
       </p>
+      <p class="note">
+        <strong>Modifier <code>NEEDED_COLS</code> impose de reconstruire le KV.</strong> Le corpus en cache a
+        été projeté avec l'ancienne liste&nbsp;: une colonne ajoutée reste absente jusqu'au prochain
+        <code>/refresh</code> ou au prochain passage du cron. Une colonne demandée mais introuvable dans
+        l'export est silencieusement ignorée, sans erreur.
+      </p>
+
+      <h3 id="schema-world">Agrégat mondial — <code>GET /csv/world</code></h3>
       <p>
-        La détection de colonnes du Worker travaille en cascade&nbsp;: égalité stricte, puis insensible à la casse,
-        puis sous-chaîne. C'est elle qui fait correspondre l'alias <code>ISSN</code> à
-        <em>Journal ISSN (print version)</em>, et qui absorbe les renommages mineurs d'un export à l'autre.
-        Elle ne peut rien, en revanche, pour une colonne purement et simplement supprimée.
+        Un seul objet, regroupé par pays, avec des clés d'une lettre&nbsp;: à 23&nbsp;592 revues, des noms de
+        champs complets pèseraient plus que les données.
       </p>
+      <div class="bloc">
+        <div class="bloc__bar"><span class="bloc__label">Forme de la réponse</span></div>
+<pre><code>{
+  "cachedAt":     "2026-11-16T03:00:12.031Z",
+  "totalRows":    23592,
+  "countryCount": 131,
+  "countries": {
+    "Nigeria": {
+      "count": 294,
+      "journals": [
+        { "t": "Journal of…", "i": "", "e": "2756-4525",
+          "u": "https://doaj.org/toc/2756-4525", "l": "CC BY",
+          "a": "Yes", "am": "50", "ac": "USD" }
+      ]
+    }
+  }
+}</code></pre>
+      </div>
+      <div class="tw">
+        <table>
+          <thead><tr><th scope="col">Clé</th><th scope="col">Colonne DOAJ</th></tr></thead>
+          <tbody>
+            <tr><th scope="row"><code>t</code></th><td>Journal title</td></tr>
+            <tr><th scope="row"><code>i</code>, <code>e</code></th><td>ISSN, EISSN</td></tr>
+            <tr><th scope="row"><code>u</code></th><td>URL in DOAJ</td></tr>
+            <tr><th scope="row"><code>l</code></th><td>Journal license</td></tr>
+            <tr><th scope="row"><code>a</code></th><td>APC — <code>Yes</code> ou <code>No</code></td></tr>
+            <tr><th scope="row"><code>am</code>, <code>ac</code></th><td>Montant et devise, reséparés de <em>APC amount</em> par <code>splitApcAmount()</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">
+        <strong>Neuf colonnes lues sur cinquante-deux.</strong> <code>WORLD_COLS</code> ne demande que ce qui
+        est agrégé, et le lecteur en flux n'assemble même pas les autres. C'est cette parcimonie qui fait
+        tenir la construction dans les 128&nbsp;Mo d'un isolat.
+      </p>
+
+      <h3 id="schema-enrichment">Enrichissement — <code>GET /enrichment</code></h3>
+      <p>
+        Un objet unique, réunissant quatre résolutions indépendantes et les métadonnées du dernier passage.
+        Sa <a href="#donnees-enrichissement">forme complète</a> est donnée plus haut&nbsp;; voici le contrat
+        de chaque champ.
+      </p>
+      <div class="tw tw--large">
+        <table>
+          <thead><tr><th scope="col">Champ</th><th scope="col">Forme</th><th scope="col">Sémantique et contrôle</th></tr></thead>
+          <tbody>
+            <tr>
+              <th scope="row"><code>crossref</code></th>
+              <td><code>{ ISSN: entier | null }</code></td>
+              <td>Nombre d'articles déposés. <code>0</code> est une réponse&nbsp;: l'ISSN est inconnu de
+                Crossref. <code>null</code> n'en est pas une&nbsp;: la requête a échoué. <code>/report-cr</code>
+                n'accepte qu'un entier fini positif.</td>
+            </tr>
+            <tr>
+              <th scope="row"><code>openalex</code></th>
+              <td><code>{ ISSN: { id, works_count } | null }</code></td>
+              <td><code>/report-oa</code> exige un <code>id</code> commençant par
+                <code>https://openalex.org/</code> et un <code>works_count</code> strictement positif&nbsp;;
+                tout le reste est enregistré <code>null</code>. Une valeur non nulle déjà connue n'est jamais
+                écrasée.</td>
+            </tr>
+            <tr>
+              <th scope="row"><code>opencitations</code></th>
+              <td><code>{ ISSN: booléen }</code></td>
+              <td>Présence dans l'index de citations. Une présence déjà enregistrée ne redescend jamais à
+                <code>false</code>.</td>
+            </tr>
+            <tr>
+              <th scope="row"><code>oai</code></th>
+              <td><code>{ ISSN: fiche | false }</code></td>
+              <td>Fiche d'entrepôt&nbsp;: <code>url</code>, <code>name</code>, <code>granularity</code>,
+                <code>earliest</code>, chacun tronqué à 200 caractères. <code>false</code> signifie «&nbsp;sondée
+                sans résultat&nbsp;», une clé absente «&nbsp;pas encore sondée&nbsp;». Recollé à la lecture
+                depuis <code>oai_cache</code>.</td>
+            </tr>
+            <tr>
+              <th scope="row"><code>generated</code></th>
+              <td>ISO 8601</td>
+              <td>Fin du dernier passage d'enrichissement. Repris dans l'en-tête <code>X-Generated</code>.</td>
+            </tr>
+            <tr>
+              <th scope="row"><code>journals</code></th>
+              <td>Entier</td>
+              <td>Taille du corpus au moment du passage.</td>
+            </tr>
+            <tr>
+              <th scope="row"><code>refreshedFrom</code>, <code>refreshed</code></th>
+              <td>Entiers</td>
+              <td>Position et longueur de la tranche traitée. Le curseur reboucle en fin de corpus.</td>
+            </tr>
+            <tr>
+              <th scope="row"><code>foundCrossref</code>, <code>foundOpenalex</code></th>
+              <td>Entiers</td>
+              <td>Volumes connus, tous passages confondus. Ce sont des compteurs d'avancement, pas des
+                résultats de recherche.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="schema-meta">Métadonnées de cache — <code>GET /status</code></h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th scope="col">Champ</th><th scope="col">Forme</th><th scope="col">Sens</th></tr></thead>
+          <tbody>
+            <tr><th scope="row"><code>cachedAt</code></th><td>ISO 8601</td><td>Date de construction du corpus. Affichée dans l'en-tête de l'application, et servie aussi en <code>X-Cache-Date</code>.</td></tr>
+            <tr><th scope="row"><code>count</code></th><td>Entier</td><td>Revues retenues, soit 956 au 13 novembre 2026. En-tête <code>X-Cache-Count</code>.</td></tr>
+            <tr><th scope="row"><code>totalRows</code></th><td>Entier</td><td>Lignes examinées après le pré-filtre textuel, pas les 23&nbsp;592 lignes du CSV.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">
+        <strong><code>/status</code> ne dit rien de l'enrichissement.</strong> Il ne lit que
+        <code>african_journals_meta</code>. L'état du balayage OAI-PMH et celui du cache d'enrichissement
+        n'ont pas de route publique&nbsp;: ils ne se lisent que dans <code>oai_cache_meta</code> et
+        <code>enrichment_cache_meta</code>, par <code>wrangler</code>.
+      </p>
+
+      <h3 id="schema-ref">Référence bibliographique neutre — <code>toRef()</code></h3>
+      <p>
+        Dernier schéma, et le seul qui ne vienne pas du DOAJ&nbsp;: il réduit une notice OpenAlex à ce qu'une
+        citation demande. Les cinq formats, et les trois exports, n'en sont que des rendus.
+      </p>
+      <div class="tw tw--large">
+        <table>
+          <thead><tr><th scope="col">Champ</th><th scope="col">Origine dans la notice OpenAlex</th></tr></thead>
+          <tbody>
+            <tr><th scope="row"><code>id</code></th><td><code>id</code> — URI OpenAlex de l'article</td></tr>
+            <tr><th scope="row"><code>doi</code></th><td><code>doi</code>, débarrassé du préfixe <code>https://doi.org/</code></td></tr>
+            <tr><th scope="row"><code>title</code></th><td><code>title</code>, à défaut <code>display_name</code></td></tr>
+            <tr><th scope="row"><code>authors</code></th><td>Tableau de noms, depuis <code>authorships[].author.display_name</code>, à défaut <code>raw_author_name</code></td></tr>
+            <tr><th scope="row"><code>year</code>, <code>date</code></th><td><code>publication_year</code>, <code>publication_date</code></td></tr>
+            <tr><th scope="row"><code>journal</code>, <code>publisher</code></th><td><code>primary_location.source.display_name</code> et <code>host_organization_name</code></td></tr>
+            <tr><th scope="row"><code>issn</code></th><td><code>source.issn_l</code>, à défaut le premier de <code>source.issn</code></td></tr>
+            <tr><th scope="row"><code>volume</code>, <code>issue</code>, <code>firstPage</code>, <code>lastPage</code></th><td><code>biblio</code></td></tr>
+            <tr><th scope="row"><code>lang</code>, <code>type</code></th><td><code>language</code>, <code>type</code> — <code>article</code> par défaut</td></tr>
+            <tr><th scope="row"><code>url</code></th><td><code>https://doi.org/&lt;doi&gt;</code> si un DOI existe, sinon l'URI OpenAlex</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="schema-navigateur">Stockage navigateur</h3>
+      <div class="tw tw--large">
+        <table>
+          <caption>Tout est propre au visiteur&nbsp;: rien n'est synchronisé, rien n'est lisible côté serveur.</caption>
+          <thead><tr><th scope="col">Clé</th><th scope="col">Stockage</th><th scope="col">Contenu</th></tr></thead>
+          <tbody>
+            <tr><th scope="row"><code>doaj-theme</code></th><td><code>localStorage</code></td><td>Thème choisi&nbsp;: clair, sombre ou sépia.</td></tr>
+            <tr><th scope="row"><code>oa_bookmarks_v1</code></th><td><code>localStorage</code></td><td>Tableau de clés de revues signalées, dans l'ordre d'ajout.</td></tr>
+            <tr><th scope="row"><code>oa_biblio_basket_v1</code></th><td><code>localStorage</code></td><td>Tableau de références neutres, pas de notices OpenAlex.</td></tr>
+            <tr><th scope="row"><code>vizCollapsed</code></th><td><code>localStorage</code></td><td>Visualisations repliées par le visiteur.</td></tr>
+            <tr><th scope="row"><code>doaj-journal-json-cache-v2</code></th><td>Cache API</td><td>Le corpus lui-même, sept jours. Voir <a href="#donnees-cache">Cache navigateur</a>.</td></tr>
+          </tbody>
+        </table>
+      </div>
     </section>
 
     <section id="css">
@@ -1915,11 +2236,50 @@ si tryFetchCSV() échoue :
         sous elle.
       </p>
 
+      <h3 id="ui-citer">Citer et exporter</h3>
+      <p>
+        Bloc <code>biblio-export-js</code>. Chaque article de la fiche porte un bouton «&nbsp;Citer&nbsp;» et
+        un bouton panier. La notice OpenAlex déjà chargée est d'abord réduite à une
+        <strong>référence neutre</strong> — <code>toRef()</code>, décrite dans le
+        <a href="#schema-ref">schéma de métadonnées</a> —&nbsp;; les cinq formats n'en sont que des mises en
+        forme. Rien n'est demandé au réseau&nbsp;: tout est tiré de la notice en mémoire.
+      </p>
+      <div class="tw tw--large">
+        <table>
+          <thead><tr><th scope="col">Format</th><th scope="col">Particularité de la mise en forme</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">APA 7</th><td>Noms inversés et initiales&nbsp;; au-delà de vingt auteurs, les dix-neuf premiers, des points de suspension, puis le dernier.</td></tr>
+            <tr><th scope="row">MLA 9</th><td>Premier auteur inversé, les suivants en ordre direct.</td></tr>
+            <tr><th scope="row">Chicago</th><td>Connecteur <code>and</code>, prénoms développés.</td></tr>
+            <tr><th scope="row">ISO 690</th><td>Nom de famille en capitales, titre de revue en évidence.</td></tr>
+            <tr><th scope="row">BibTeX</th><td>Clé construite sur l'auteur et l'année&nbsp;; entrée <code>@article</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ul>
+        <li><strong>Référence seule</strong> — copie dans le presse-papiers, ou téléchargement en
+          <code>.bib</code> et <code>.ris</code>, nommé d'après le titre de l'article.</li>
+        <li><strong>Panier</strong> — <code>bibliographie.bib</code>, <code>bibliographie.ris</code> et
+          <code>bibliographie.csv</code>. Le panier conserve des références neutres, pas les notices
+          OpenAlex entières&nbsp;: celles-ci dépasseraient vite le quota de 5&nbsp;Mo de
+          <code>localStorage</code>.</li>
+      </ul>
+      <p class="note">
+        <strong>C'est le seul bloc testé automatiquement.</strong> <code>node test_biblio.js</code> extrait
+        <code>&lt;script id="biblio-export-js"&gt;</code> du HTML, l'exécute dans un <code>vm</code> Node avec
+        un DOM minimal, et vérifie les cinq formats sur une notice OpenAlex réelle. La mise en forme est la
+        seule logique du bloc qui puisse se tromper en silence.
+      </p>
+
       <h3 id="ui-signets">Signets</h3>
       <p>
         Chaque carte porte un bouton signet. La sélection est conservée dans <code>localStorage</code> sous la clé
-        <code>oa_bookmarks_v1</code>, et un bouton flottant affiche le compte courant. La liste s'exporte en CSV,
-        en PDF ou en Markdown.
+        <code>oa_bookmarks_v1</code>, et un bouton flottant affiche le compte courant. La liste s'exporte en
+        <code>signets.csv</code>, <code>signets.pdf</code> ou <code>signets.md</code>.
+      </p>
+      <p class="note">
+        <strong>Signets et panier ne sont pas la même liste.</strong> Les signets retiennent des revues, le
+        panier des articles. Deux clés distinctes, deux exports distincts.
       </p>
 
       <h3 id="ui-feedback">Signalement</h3>
@@ -2380,6 +2740,19 @@ queueScrollToCards();                // fait défiler vers le catalogue</code></
         <code>CURRENTFILTER</code> mais par <code>APC_FILTER_VAL</code> et par l'ensemble <code>DB_FILTER</code>,
         afin de pouvoir se cumuler avec un filtre issu d'un graphique.
       </p>
+      <p>
+        <code>DB_FILTER</code> contient les identifiants des interrupteurs actifs&nbsp;: <code>ajol</code>,
+        <code>crossref</code>, <code>openalex</code>, <code>opencitations</code>, <code>scopus</code>,
+        <code>wos</code> et <code>oai</code>. <code>_rowInDb(row, id)</code> tranche revue par revue, chaque
+        critère ayant sa propre source de vérité — carte en mémoire, cache d'enrichissement ou liste statique.
+      </p>
+      <p class="note">
+        <strong>Une valeur inconnue est un laissez-passer.</strong> Tant qu'une résolution Crossref est en
+        attente, ou qu'une revue n'a pas encore été sondée en OAI-PMH, <code>_rowInDb</code> renvoie
+        <code>true</code>&nbsp;: la revue reste visible au lieu de disparaître le temps d'une requête. Si une
+        liste de référence manque entièrement, <code>markDbUnavailable()</code> éteint l'interrupteur plutôt
+        que de vider le catalogue.
+      </p>
     </section>
 
     <section id="dependances">
@@ -2396,8 +2769,9 @@ queueScrollToCards();                // fait défiler vers le catalogue</code></
             <tr><th scope="row">jsPDF</th><td>2.5.1</td><td>Export PDF des recommandations et des signets</td><td>MIT</td></tr>
             <tr><th scope="row">thinking-orbs</th><td>0.3.2</td><td>Orbe animée de l'écran de chargement et des boutons d'analyse</td><td>MIT</td></tr>
             <tr><th scope="row">flag-icons</th><td>7.2.3</td><td>Drapeaux en CSS, par code ISO&nbsp;2</td><td>MIT</td></tr>
-            <tr><th scope="row">Google Fonts</th><td>—</td><td>Manrope et Inter</td><td>OFL</td></tr>
+            <tr><th scope="row">Google Fonts</th><td>—</td><td>Manrope, seule police chargée</td><td>OFL</td></tr>
             <tr><th scope="row">Material Symbols</th><td>—</td><td>Icônes</td><td>Apache 2.0</td></tr>
+            <tr><th scope="row">Counterscale</th><td>—</td><td>Mesure d'audience, <code>tracker.js</code> auto-hébergé</td><td>MIT</td></tr>
           </tbody>
         </table>
       </div>
@@ -2406,6 +2780,15 @@ queueScrollToCards();                // fait défiler vers le catalogue</code></
         les barres et les points animés ont été retirés. <code>thinking-orbs</code> est chargé en module depuis
         un CDN&nbsp;: si l'import échoue, l'orbe est simplement masquée et le texte d'état continue de rendre
         compte de la progression.
+      </p>
+
+      <h3 id="dependances-audience">Mesure d'audience</h3>
+      <p>
+        <code>counterscale.ynnonazaline.workers.dev/tracker.js</code>, chargé en <code>defer</code> avec
+        <code>data-site-id="observatoire-oa"</code>. C'est un second Worker du même compte Cloudflare, sous
+        licence MIT&nbsp;: sans cookie et sans donnée personnelle, donc sans bannière de consentement. Le
+        traceur ignore de lui-même <code>localhost</code> et suit les changements d'URL par
+        <code>pushState</code>, ce qui couvre les fiches de revue.
       </p>
     </section>
 
@@ -2454,6 +2837,9 @@ queueScrollToCards();                // fait défiler vers le catalogue</code></
             <tr><th scope="row"><code>enrichment_cache</code></th><td>Crossref, OpenAlex et OpenCitations par ISSN</td></tr>
             <tr><th scope="row"><code>enrichment_cache_meta</code></th><td>Date, volumes, position de la dernière tranche</td></tr>
             <tr><th scope="row"><code>enrichment_cursor</code></th><td>Index de reprise du rafraîchissement Crossref</td></tr>
+            <tr><th scope="row"><code>oai_cache</code></th><td>Entrepôt OAI-PMH par ISSN, ou <code>false</code></td></tr>
+            <tr><th scope="row"><code>oai_cache_meta</code></th><td>Date, volume sondé, nombre d'entrepôts connus</td></tr>
+            <tr><th scope="row"><code>oai_cursor</code></th><td>Index de reprise du balayage OAI-PMH</td></tr>
             <tr><th scope="row"><code>world_journals</code></th><td>Agrégat mondial par pays</td></tr>
             <tr><th scope="row"><code>world_journals_meta</code></th><td><code>cachedAt</code>, <code>totalRows</code>, <code>countryCount</code></td></tr>
           </tbody>
@@ -2467,8 +2853,10 @@ queueScrollToCards();                // fait défiler vers le catalogue</code></
         exception. Interroger Crossref pour les 956 revues du corpus en demanderait plus de mille.
       </p>
       <p>
-        Le cron ne traite donc qu'une <strong>tranche de vingt revues</strong> par passage, repérée par
-        <code>enrichment_cursor</code>, qui avance d'un passage à l'autre et reboucle en fin de corpus.
+        Le cron dominical ne traite donc qu'une <strong>tranche de vingt revues</strong> par passage, repérée
+        par <code>enrichment_cursor</code>, qui avance d'un passage à l'autre et reboucle en fin de corpus.
+        Le balayage OAI-PMH obéit à la même règle avec son propre curseur, mais dans une invocation séparée&nbsp;:
+        huit revues, six URL candidates au pire, quarante-huit sous-requêtes.
         Le reste du cache est entretenu par les navigateurs, via les routes <code>/report-*</code>.
         Chaque écriture fusionne, de sorte qu'un échec de requête ne dégrade jamais une valeur déjà connue.
       </p>
@@ -2483,9 +2871,17 @@ queueScrollToCards();                // fait défiler vers le catalogue</code></
       <div class="bloc">
         <div class="bloc__bar"><span class="bloc__label">wrangler.toml</span></div>
 <pre><code>[triggers]
-crons = ["0 3 * * SUN"]   # chaque dimanche à 03:00 UTC</code></pre>
+crons = ["0 3 * * SUN", "*/15 * * * *"]
+# "0 3 * * SUN"  : corpus, agrégat mondial, tranche Crossref
+# "*/15 * * * *" : une tranche du balayage OAI-PMH</code></pre>
       </div>
-      <p>Chaque passage enchaîne trois opérations, dont deux téléchargements du CSV DOAJ&nbsp;:</p>
+      <p>
+        <code>scheduled()</code> répartit sur le motif reçu&nbsp;: tout ce qui n'est pas
+        <code>0 3 * * SUN</code> part dans <code>sweepOai()</code>. Les deux horaires existent pour séparer
+        les budgets de sous-requêtes&nbsp;: le balayage en consomme jusqu'à quarante-huit et ne peut pas
+        partager l'invocation dominicale, qui télécharge déjà deux fois le CSV du DOAJ.
+      </p>
+      <p>Le passage dominical enchaîne trois opérations, dont ces deux téléchargements&nbsp;:</p>
       <ol class="proc">
         <li><strong>Corpus africain</strong> — reconstruction complète depuis le CSV du DOAJ.</li>
         <li><strong>Tranche d'enrichissement</strong> — vingt revues interrogées auprès de Crossref, fusionnées
@@ -2547,10 +2943,14 @@ wrangler secret put REFRESH_SECRET
 wrangler deploy
 
 # 4. Pré-remplissage immédiat du cache
-curl "https://doaj-african-cache.ynnonazaline.workers.dev/refresh?secret=&lt;secret&gt;"</code></pre>
+curl "https://doaj-african-cache.ynnonazaline.workers.dev/refresh?secret=&lt;secret&gt;"
+
+# 5. Une tranche du balayage OAI-PMH, sans attendre le cron
+curl "https://doaj-african-cache.ynnonazaline.workers.dev/oai-sweep?secret=&lt;secret&gt;"</code></pre>
       </div>
       <p>
-        La sortie de <code>wrangler deploy</code> doit mentionner <code>schedule: 0 3 * * SUN</code>.
+        La sortie de <code>wrangler deploy</code> doit mentionner les deux déclencheurs,
+        <code>0 3 * * SUN</code> et <code>*/15 * * * *</code>.
         Si elle signale un déclencheur partiellement mis à jour, la planification a été refusée
         et seule la logique a été déployée.
       </p>
@@ -2644,9 +3044,10 @@ try {
             </tr>
             <tr>
               <th scope="row">Cache navigateur de l'enrichissement</th>
-              <td><code>/enrichment</code> est servi avec une validité de vingt-quatre heures&nbsp;: après une
-                reconstruction côté serveur, un visiteur récent peut conserver l'ancienne version une journée.
-                Le phénomène se résorbe seul.</td>
+              <td><code>/enrichment</code> est servi avec une validité d'une heure, suivie de vingt-trois heures
+                de <code>stale-while-revalidate</code>&nbsp;: l'affichage reste instantané, la version suivante
+                arrive en arrière-plan. La validité ferme de vingt-quatre heures, elle, rendait une
+                reconstruction invisible une journée entière.</td>
             </tr>
             <tr>
               <th scope="row">Conjonction des filtres</th>
@@ -2664,6 +3065,25 @@ try {
               <td>Les revues absentes de ces deux bases produisent des 404 dans la console, et Crossref ne
                 renvoie pas d'en-tête CORS sur ses 404. C'est le comportement normal de ces API&nbsp;:
                 ces erreurs réseau n'interrompent rien.</td>
+            </tr>
+            <tr>
+              <th scope="row">Balayage OAI-PMH au moins mensuel</th>
+              <td><code>oai_cache</code> expire après 35 jours comme le reste. Le cron au quart d'heure couvre
+                le corpus en une trentaine d'heures, donc la marge est large&nbsp;; mais un Worker redéployé
+                sans ses déclencheurs perd silencieusement le critère, et l'interrupteur s'éteint de lui-même
+                au chargement suivant.</td>
+            </tr>
+            <tr>
+              <th scope="row">Panier et signets dans <code>localStorage</code></th>
+              <td>Les deux listes vivent dans le navigateur du visiteur, sous <code>oa_biblio_basket_v1</code> et
+                <code>oa_bookmarks_v1</code>. Rien n'est synchronisé, rien n'est récupérable après un nettoyage
+                du stockage du site. Le panier ne conserve que des références neutres, pour tenir dans le quota
+                de 5&nbsp;Mo.</td>
+            </tr>
+            <tr>
+              <th scope="row">Tableau de bord d'audience ouvert</th>
+              <td><code>counterscale.ynnonazaline.workers.dev</code> sert à la fois le traceur et son tableau de
+                bord. Qui connaît l'adresse lit les chiffres de fréquentation de l'observatoire.</td>
             </tr>
             <tr>
               <th scope="row">Signalement sans serveur</th>
@@ -2696,6 +3116,12 @@ try {
                 <code>NEEDED_COLS</code>&nbsp;: les lignes correspondantes de la fiche restaient vides.
                 Elles sont désormais dans <code>NEEDED_COLS</code>. Toute modification de cette liste
                 impose de reconstruire le KV.</td>
+            </tr>
+            <tr>
+              <th scope="row">Bandeau de l'application en retard</th>
+              <td>Le bandeau du pied de page annonçait «&nbsp;Documentation technique — V4.1&nbsp;» quand ce
+                document se donnait pour la V5.2&nbsp;: le lien portait un numéro plus ancien que sa cible.
+                Les deux affichent maintenant la même version.</td>
             </tr>
             <tr>
               <th scope="row">Liste Scopus figée</th>
@@ -2767,7 +3193,7 @@ try {
         <ul>
           <li>Awuvé Innocent Azilan — <a href="https://azilan.me" target="_blank" rel="noopener noreferrer">azilan.me&nbsp;↗</a></li>
           <li>Application sous licence <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer">CC BY-NC 4.0&nbsp;↗</a></li>
-          <li>Documentation technique, V5.2, novembre 2026</li>
+          <li>Documentation technique, V6.0, 21 novembre 2026</li>
         </ul>
       </div>
       <div>
@@ -2794,7 +3220,8 @@ try {
     <p>
       Documentation technique de l'Observatoire des revues africaines en libre accès.
       Les volumes cités, 956 revues africaines et 23&nbsp;592 revues dans le monde, sont ceux relevés
-      le 13 novembre 2026 et évoluent à chaque passage de la tâche planifiée.
+      le 13 novembre 2026 et évoluent à chaque passage des tâches planifiées. Le code décrit est celui
+      du 21 novembre 2026.
     </p>
   </div>
 </footer>
