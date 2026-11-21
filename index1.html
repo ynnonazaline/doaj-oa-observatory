@@ -209,6 +209,9 @@
       transition:border-color .18s ease, background .18s ease;
     }
     .apc-chip .material-symbols-outlined{ font-size:16px; line-height:1; }
+    /* Le montant annonce accompagne le converti, en retrait : meme pastille,
+       deux poids. */
+    .apc-chip-orig{ font-size:11.5px; font-weight:600; letter-spacing:0; color:var(--muted); }
     .apc-chip:hover{ border-color:var(--accent); }
     .apc-chip-free{
       color:#047857; border-color:rgba(16,185,129,.38); background:rgba(16,185,129,.11);
@@ -2364,6 +2367,11 @@ function buildDisciplineKeywordDropdown(rows){
         el.innerHTML = '<span class="apc-chip-txt">' + (converted ? '\u2248\u00a0' : '')
                      + eur.toLocaleString('fr-FR') + '\u00a0\u20ac</span>';
         if(converted){
+          /* Les deux montants sur la pastille : le converti pour comparer d'une
+             revue a l'autre, l'annonce parce que c'est lui que la revue facture.
+             L'un sans l'autre se lit de travers. */
+          el.insertAdjacentHTML('beforeend', '<span class="apc-chip-orig">'
+            + Math.round(parsed.amount).toLocaleString('fr-FR') + ' ' + parsed.currency + '</span>');
           lines.push({ label: 'Montant annonc\u00e9', value: Math.round(parsed.amount).toLocaleString('fr-FR') + ' ' + parsed.currency });
           lines.push({ label: 'Converti', value: eur.toLocaleString('fr-FR') + ' \u20ac' });
         } else {
@@ -8012,14 +8020,9 @@ ${detail}`;
     // meme chose en Oui/Non juste au-dessus : elle a ete retiree.
     var apcVal = document.createElement('span');
     apcVal.style.cssText = 'display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;';
+    // La pastille porte desormais les deux montants : le « soit 1000 ZAR » qui
+    // la suivait ici repetait ce qu'elle dit.
     if(typeof makeApcChip === 'function') apcVal.appendChild(makeApcChip(row));
-    var parsedApc = typeof parseApcAmount === 'function' ? parseApcAmount(row) : null;
-    if(parsedApc && parsedApc.currency && parsedApc.currency !== 'EUR'){
-      var orig = document.createElement('span');
-      orig.className = 'subtle';
-      orig.textContent = 'soit ' + Math.round(parsedApc.amount).toLocaleString('fr-FR') + ' ' + parsedApc.currency;
-      apcVal.appendChild(orig);
-    }
     if(row[COLS.apcInfoUrl]) apcVal.appendChild(externalLink(row[COLS.apcInfoUrl]));
     addInfoRow(container, 'Frais de publication', apcVal);
 

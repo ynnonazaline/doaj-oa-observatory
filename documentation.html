@@ -2158,11 +2158,17 @@ si tryFetchCSV() échoue :
           <thead><tr><th scope="col">État</th><th scope="col">Affichage</th><th scope="col">Au survol</th></tr></thead>
           <tbody>
             <tr><th scope="row"><code>.apc-chip-free</code></th><td>Losange et «&nbsp;Sans frais&nbsp;», en vert</td><td>Accès diamant&nbsp;: ni frais d'auteur, ni abonnement</td></tr>
-            <tr><th scope="row"><code>.apc-chip-paid</code></th><td>Le montant en euros, précédé de <code>≈</code> s'il vient d'une conversion</td><td>Montant annoncé, montant converti, lien vers la grille tarifaire</td></tr>
+            <tr><th scope="row"><code>.apc-chip-paid</code></th><td>Le montant en euros, précédé de <code>≈</code> s'il vient d'une conversion, suivi du montant annoncé dans la devise de la revue, en retrait&nbsp;: «&nbsp;≈ 27 € 1 600 EGP&nbsp;»</td><td>Les deux montants détaillés, et le lien vers la grille tarifaire</td></tr>
             <tr><th scope="row"><code>.apc-chip-unknown</code></th><td>«&nbsp;Frais&nbsp;», en gris</td><td>La revue facture, mais le DOAJ ne donne pas le montant</td></tr>
           </tbody>
         </table>
       </div>
+      <p class="note">
+        <strong>Les deux montants, partout.</strong> Le converti sert à comparer deux revues, l'annoncé est
+        celui que la revue facture&nbsp;: la pastille porte les deux, sur les cartes comme sur la fiche, où
+        la mention «&nbsp;soit 1 600 EGP&nbsp;» qui la suivait faisait doublon et a été retirée. Les exports
+        suivent la même règle, dans deux colonnes.
+      </p>
       <p class="note">
         <strong>Un prix n'est pas une alerte.</strong> L'état payant reste neutre&nbsp;; seul l'accès
         diamant est coloré. La pastille est <strong>toujours présente</strong>&nbsp;: son absence ne
