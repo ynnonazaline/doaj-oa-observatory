@@ -1,13 +1,22 @@
 /**
  * Cloudflare Worker — DOAJ African Journals Cache
  *
- * - Cron (1st of month): fetch DOAJ CSV → filter African rows
+ * - Cron (weekly, see [triggers] in wrangler.toml): fetch DOAJ CSV → filter African rows
  *   → extract needed columns → store compact JSON in KV
- *   → query Crossref + OpenAlex for all ISSNs → store enrichment JSON in KV
- * - GET /csv          : pre-filtered African journals JSON
- * - GET /enrichment   : pre-computed Crossref + OpenAlex counts per ISSN
- * - GET /status       : cache metadata
- * - GET /refresh?secret=XXX : force manual refresh of all caches
+ *   → query Crossref for all ISSNs → store enrichment JSON in KV
+ *   The KV entries live 35 days (KV_TTL), so the cron must run at least monthly
+ *   or /csv starts answering 503 "cache warming up" to the first visitors.
+ * - GET  /csv          : pre-filtered African journals JSON
+ * - GET  /enrichment   : pre-computed Crossref + OpenAlex + OpenCitations per ISSN
+ * - GET  /status       : cache metadata
+ * - GET  /refresh?secret=XXX : force manual refresh of all caches
+ * - POST /report-oa    : browsers report the OpenAlex data they resolved
+ * - POST /report-oc    : browsers report the OpenCitations hits they resolved
+ * - POST /report-cr    : browsers report the Crossref counts they resolved
+ *
+ * Les trois /report-* existent parce qu'une invocation de Worker ne dispose que
+ * d'une cinquantaine de sous-requêtes : le cache d'enrichissement est alimenté
+ * par les visiteurs, le cron ne fait qu'en rafraîchir une tranche par passage.
  */
 
 const DOAJ_CSV_URL = "https://doaj.org/csv";
@@ -43,36 +52,57 @@ const WORLD_COLS = [
   "Journal license",
   "APC",
   "APC amount",
-  "APC amount currency",
 ];
 
-// Columns to keep in the output JSON (exact DOAJ CSV header names)
+// Colonnes transportées du CSV DOAJ vers le cache KV. Toute colonne absente
+// d'ici est invisible pour le front, même si index.html la lit : c'est la cause
+// des champs « Éditeur », « Texte de la licence » et « Articles indexés » vides.
+// NB : le DOAJ a retiré « DOI » et « APC amount currency » de son export (54 ->
+// 52 colonnes). La devise est désormais incluse dans « APC amount » (« 2000 USD »,
+// parfois « 1100 USD; 740 GBP »), que splitApcAmount() sait lire.
 const NEEDED_COLS = [
   "Journal title",
   "ISSN",
   "EISSN",
   "Journal URL",
+  "Publisher",
   "Languages in which the journal accepts manuscripts",
   "Journal license",
+  "License attributes",
+  "URL for license terms",
   "Country of publisher",
   "Country of other organisation",
   "Average number of weeks between article submission and publication",
-  "DOI",
   "Subjects",
   "Keywords",
   "When did the journal start to publish all content using an open license?",
   "Added on Date",
   "Review process",
+  "Review process information URL",
   "Most Recent Article Added",
+  "Number of Article Records",
   "URL in DOAJ",
   "Author holds copyright without restrictions",
   "APC",
+  "APC information URL",
   "APC amount",
-  "APC amount currency",
   "Preservation Services",
   "Preservation Service: national library",
   "Persistent article identifiers",
 ];
+
+/**
+ * Le DOAJ a fusionné « APC amount currency » dans « APC amount » : la valeur
+ * ressemble à « 2000 USD », parfois « 1100 USD; 740 GBP » (plusieurs devises).
+ * On ne garde que la première paire, et on la resépare en { am, ac } pour que
+ * le contrat du endpoint /csv/world reste inchangé.
+ */
+function splitApcAmount(raw) {
+  const first = String(raw || "").split(/[|;]/)[0].trim();
+  const num  = first.match(/\d+/);
+  const code = first.toUpperCase().match(/(?:^|[^A-Z])([A-Z]{3})(?:[^A-Z]|$)/);
+  return { am: num ? num[0] : "", ac: code ? code[1] : "" };
+}
 
 function canonicalCountry(s) {
   if (!s) return null;
@@ -99,59 +129,128 @@ function isAfrican(row, countryCol, otherOrgCol) {
   return others.some(x => x && AFRICAN_COUNTRIES.has(x));
 }
 
-// RFC 4180 CSV parser (handles quoted fields, escaped quotes)
-function parseCSVText(text) {
-  const headers = [];
-  const rows = [];
-  let pos = 0;
+// RFC 4180 CSV parser (handles quoted fields, escaped quotes).
+// Variante incrémentale : appelle onRow(fields, headers) pour chaque ligne sans
+// jamais les accumuler. Matérialiser les 23 592 lignes × 52 colonnes du CSV
+// complet monte à ~795 Mio, bien au-delà des 128 Mo d'un isolat Worker — c'est
+// ce qui faisait échouer buildWorldCache à chaque passage du cron.
+// Lit UN enregistrement dans `text` à partir de `from`.
+// Renvoie { fields, next }, ou null si l'enregistrement déborde du tampon et
+// qu'il reste des octets à lire (atEof === false).
+// `wanted` : Set d'indices de colonnes à construire ; les autres sont traversées
+// sans rien allouer (9 colonnes utiles sur 52 dans le CSV mondial). Les valeurs
+// conservées sont assemblées caractère par caractère, donc autonomes : le tampon
+// qui les a produites peut être libéré.
+function readRecord(text, from, wanted, atEof) {
   const len = text.length;
+  let pos = from;
+  const fields = [];
+  let i = 0;
 
-  function readField() {
-    if (pos >= len) return "";
-    if (text[pos] === '"') {
-      pos++;
-      let val = "";
-      while (pos < len) {
-        if (text[pos] === '"') {
-          if (pos + 1 < len && text[pos + 1] === '"') { val += '"'; pos += 2; }
-          else { pos++; break; }
-        } else {
-          val += text[pos++];
-        }
-      }
-      return val;
-    }
+  for (;;) {
+    const keep = !wanted || wanted.has(i);
     let val = "";
-    while (pos < len && text[pos] !== ',' && text[pos] !== '\r' && text[pos] !== '\n') {
-      val += text[pos++];
+
+    if (pos < len && text[pos] === '"') {
+      pos++;
+      for (;;) {
+        if (pos >= len) { if (!atEof) return null; break; }   // guillemet jamais refermé
+        const c = text[pos];
+        if (c === '"') {
+          if (pos + 1 >= len) {            // "" échappé ou fin de champ ? on ne peut pas savoir
+            if (!atEof) return null;
+            pos++;
+            break;
+          }
+          if (text[pos + 1] === '"') { if (keep) val += '"'; pos += 2; continue; }
+          pos++;
+          break;
+        }
+        if (keep) val += c;
+        pos++;
+      }
+    } else {
+      while (pos < len && text[pos] !== ',' && text[pos] !== '\r' && text[pos] !== '\n') {
+        if (keep) val += text[pos];
+        pos++;
+      }
+      if (pos >= len && !atEof) return null;  // le champ continue peut-être
     }
-    return val;
+
+    fields.push(val);
+    i++;
+    if (pos < len && text[pos] === ',') { pos++; continue; }
+    break;
   }
 
-  function readRow() {
-    const fields = [];
-    while (pos < len) {
-      fields.push(readField());
-      if (pos < len && text[pos] === ',') { pos++; }
-      else { break; }
+  if (pos >= len && !atEof) return null;      // séparateur de ligne pas encore lu
+  if (pos < len && text[pos] === '\r') pos++;
+  if (pos < len && text[pos] === '\n') pos++;
+  return { fields, next: pos };
+}
+
+function isBlankRecord(fields) {
+  return fields.length === 0 || (fields.length === 1 && !fields[0]);
+}
+
+// La 1re colonne est toujours construite : la détection de ligne vide s'y appuie.
+function wantedSet(onHeaders, headers) {
+  if (!onHeaders) return null;
+  const w = onHeaders(headers);
+  return w ? new Set(w).add(0) : null;
+}
+
+// Parcourt le corps de la réponse au fil de l'eau : le CSV mondial (25 Mo, soit
+// ~50 Mo en mémoire) ne tient pas dans les 128 Mo d'un isolat Worker en plus de
+// l'agrégat. C'est ce qui faisait échouer buildWorldCache à chaque cron.
+async function parseCSVFromStream(body, onRow, onHeaders) {
+  const reader = body.pipeThrough(new TextDecoderStream()).getReader();
+  let buf = "", from = 0, headers = null, wanted = null, atEof = false;
+
+  for (;;) {
+    const r = await reader.read();
+    if (r.done) atEof = true;
+    else if (r.value) buf += r.value;
+
+    for (;;) {
+      const rec = readRecord(buf, from, headers ? wanted : null, atEof);
+      if (!rec || rec.next === from) break;
+      from = rec.next;
+      if (!headers) {
+        headers = rec.fields.map(h => h.trim());
+        wanted = wantedSet(onHeaders, headers);
+      } else if (!isBlankRecord(rec.fields)) {
+        onRow(rec.fields, headers);
+      }
+      if (from >= buf.length) break;
     }
-    if (pos < len && text[pos] === '\r') pos++;
-    if (pos < len && text[pos] === '\n') pos++;
-    return fields;
+
+    if (from > 0) { buf = buf.slice(from); from = 0; }   // on ne garde que le reste
+    if (atEof) break;
   }
 
-  const hFields = readRow();
-  hFields.forEach(h => headers.push(h.trim()));
+  return headers || [];
+}
 
-  while (pos < len) {
-    const fields = readRow();
-    if (fields.length === 0 || (fields.length === 1 && !fields[0])) continue;
-    const row = {};
-    headers.forEach((h, i) => { row[h] = fields[i] !== undefined ? fields[i] : ""; });
-    rows.push(row);
+// Variante « tout en mémoire » : réservée au corpus africain, pré-filtré à
+// ~1 000 lignes avant d'arriver ici.
+function parseCSVText(text) {
+  const rows = [];
+  let from = 0, headers = null;
+  for (;;) {
+    const rec = readRecord(text, from, null, true);
+    if (!rec || rec.next === from) break;
+    from = rec.next;
+    if (!headers) {
+      headers = rec.fields.map(h => h.trim());
+    } else if (!isBlankRecord(rec.fields)) {
+      const row = {};
+      headers.forEach((h, i) => { row[h] = rec.fields[i] !== undefined ? rec.fields[i] : ""; });
+      rows.push(row);
+    }
+    if (from >= text.length) break;
   }
-
-  return { headers, rows };
+  return { headers: headers || [], rows };
 }
 
 // Find a column name in headers (exact → case-insensitive → substring)
@@ -182,39 +281,51 @@ async function buildWorldCache(env) {
     headers: { "User-Agent": "DOAJ-World-Observatory/1.0 (https://azilan.me)" },
   });
   if (!resp.ok) throw new Error(`DOAJ CSV fetch failed: ${resp.status}`);
-  const csvText = await resp.text();
 
-  const { headers, rows } = parseCSVText(csvText);
-
-  const colMap = {};
-  for (const col of WORLD_COLS) {
-    const actual = findColumn(headers, col);
-    if (actual) colMap[col] = actual;
-  }
-  const countryCol = colMap["Country of publisher"];
-  if (!countryCol) throw new Error("Could not locate 'Country of publisher' column");
+  // Les colonnes utiles, par position : on ne garde que ce qu'on agrège, ligne
+  // après ligne, sans jamais charger le CSV entier.
+  let idx = null;
+  const buildIdx = hdrs => {
+    const m = {};
+    for (const col of WORLD_COLS) {
+      const actual = findColumn(hdrs, col);
+      m[col] = actual ? hdrs.indexOf(actual) : -1;
+    }
+    return m;
+  };
 
   const countries = {};
-  for (const row of rows) {
-    const country = (row[countryCol] || "").trim();
-    if (!country) continue;
+  let totalRows = 0;
+
+  const headers = await parseCSVFromStream(resp.body, (fields) => {
+    totalRows++;
+    const ci = idx["Country of publisher"];
+    if (ci < 0) return;
+    const country = (fields[ci] || "").trim();
+    if (!country) return;
+    const at = col => { const i = idx[col]; return (i >= 0 && fields[i]) || ""; };
     if (!countries[country]) countries[country] = { count: 0, journals: [] };
     countries[country].count++;
     countries[country].journals.push({
-      t:  row[colMap["Journal title"]]          || "",
-      i:  row[colMap["ISSN"]]                   || "",
-      e:  row[colMap["EISSN"]]                  || "",
-      u:  row[colMap["URL in DOAJ"]]            || "",
-      l:  row[colMap["Journal license"]]        || "",
-      a:  row[colMap["APC"]]                    || "",
-      am: row[colMap["APC amount"]]             || "",
-      ac: row[colMap["APC amount currency"]]    || "",
+      t:  at("Journal title"),
+      i:  at("ISSN"),
+      e:  at("EISSN"),
+      u:  at("URL in DOAJ"),
+      l:  at("Journal license"),
+      a:  at("APC"),
+      ...splitApcAmount(at("APC amount")),
     });
-  }
+  }, hdrs => {
+    idx = buildIdx(hdrs);
+    return new Set(Object.values(idx).filter(i => i >= 0));
+  });
+
+  if (!idx) idx = buildIdx(headers);
+  if (idx["Country of publisher"] < 0) throw new Error("Could not locate 'Country of publisher' column");
 
   const meta = {
     cachedAt:  new Date().toISOString(),
-    totalRows: rows.length,
+    totalRows,
     countryCount: Object.keys(countries).length,
   };
 
@@ -305,7 +416,8 @@ async function crCount(issn) {
       `https://api.crossref.org/journals/${encodeURIComponent(issn)}/works?rows=1&mailto=contact@azilan.me`,
       { headers: { 'User-Agent': 'DOAJ-Observatory/1.0 (https://azilan.me)' } }
     );
-    if (!r.ok) return null;
+    if (r.status === 404) return 0;          // ISSN inconnu de Crossref : vraie réponse
+    if (!r.ok) return null;                  // 429 / 5xx / coupure : on ne sait pas
     const d = await r.json();
     const n = d?.message?.['total-results'];
     return typeof n === 'number' ? n : null;
@@ -319,38 +431,215 @@ async function batchRun(items, size, fn) {
   }
 }
 
+// Budget de sous-requêtes d'une invocation Worker (50 sur le plan gratuit).
+// Au-delà, chaque fetch() lève : le build de juin 2026 n'avait ainsi récolté que
+// 37 revues sur 881, tout le reste étant enregistré comme « inconnu ».
+// On traite donc une tranche par passage, en faisant tourner un curseur, et on
+// FUSIONNE : un échec ne doit jamais effacer une valeur déjà connue.
+// 20 revues = au pire 40 requêtes Crossref (eISSN puis ISSN), auxquelles
+// s'ajoutent les 2 téléchargements du CSV lancés par le même cron.
+const ENRICH_LOOKUPS_PER_RUN = 20;
+const ENRICHMENT_CURSOR_KEY  = 'enrichment_cursor';
+
 async function buildEnrichmentCache(env) {
   const raw = await env.DOAJ_KV.get(CACHE_KEY);
   if (!raw) throw new Error('African journals KV not found — run /refresh first');
   const journals = JSON.parse(raw);
 
-  const crossref = {};
-  const openalex = {};
+  const existingRaw = await env.DOAJ_KV.get(ENRICHMENT_KEY);
+  const existing = existingRaw ? JSON.parse(existingRaw) : {};
+  const prevCrossref = existing.crossref || {};
 
-  // ── Crossref: one request per journal (individual API, no bulk endpoint) ──
-  await batchRun(journals, 10, async j => {
+  const cursorRaw = await env.DOAJ_KV.get(ENRICHMENT_CURSOR_KEY);
+  const start = Math.max(0, parseInt(cursorRaw, 10) || 0) % Math.max(1, journals.length);
+  const slice = journals.slice(start, start + ENRICH_LOOKUPS_PER_RUN);
+  const next  = (start + slice.length) % Math.max(1, journals.length);
+
+  const fresh = {};
+
+  // ── Crossref : une requête par revue (pas d'endpoint groupé) ──
+  await batchRun(slice, 3, async j => {
     const ei = normIssnW(j['EISSN'] || '');
     const pi = normIssnW(j['ISSN']  || '');
     if (!ei && !pi) return;
     let count = null;
-    if (ei) { count = await crCount(ei); crossref[ei] = count; }
+    if (ei) { count = await crCount(ei); fresh[ei] = count; }
     if ((!count || count === 0) && pi && pi !== ei) {
-      count = await crCount(pi); crossref[pi] = count;
+      count = await crCount(pi); fresh[pi] = count;
     }
   });
 
-  // OpenAlex: skipped — cloud IPs (Cloudflare) are blocked by OpenAlex free tier.
-  // OpenAlex data is fetched client-side from the visitor's browser IP instead.
+  // OpenAlex / OpenCitations : non interrogés ici — les IP cloud sont bloquées
+  // par leur offre gratuite. Ces données viennent des navigateurs, via
+  // /report-oa et /report-oc, et doivent donc être préservées telles quelles.
+  const crossref = { ...prevCrossref };
+  for (const [k, v] of Object.entries(fresh)) if (v !== null) crossref[k] = v;
 
   const meta = {
     generated:      new Date().toISOString(),
     journals:       journals.length,
+    refreshedFrom:  start,
+    refreshed:      slice.length,
     foundCrossref:  Object.values(crossref).filter(v => v && v > 0).length,
-    foundOpenalex:  Object.keys(openalex).length,
+    foundOpenalex:  Object.keys(existing.openalex || {}).length,
   };
 
-  await env.DOAJ_KV.put(ENRICHMENT_KEY,      JSON.stringify({ ...meta, crossref, openalex }), { expirationTtl: KV_TTL });
+  await env.DOAJ_KV.put(
+    ENRICHMENT_KEY,
+    JSON.stringify({ ...existing, ...meta, crossref }),
+    { expirationTtl: KV_TTL }
+  );
   await env.DOAJ_KV.put(ENRICHMENT_META_KEY, JSON.stringify(meta), { expirationTtl: KV_TTL });
+  await env.DOAJ_KV.put(ENRICHMENT_CURSOR_KEY, String(next), { expirationTtl: KV_TTL });
+  return meta;
+}
+
+/**
+ * Écrit l'objet d'enrichissement dans KV uniquement si `next` diffère de ce qui
+ * s'y trouve déjà. Les trois routes /report-* reçoivent à chaque visite des
+ * données que le cache connaît déjà : sans cette comparaison, un millier de
+ * visiteurs suffit à épuiser le quota d'écritures KV de la journée.
+ * Renvoie true si une écriture a eu lieu.
+ */
+async function putEnrichmentIfChanged(env, existing, next) {
+  const before = JSON.stringify(existing);
+  const after  = JSON.stringify(next);
+  if (before === after) return false;
+  await env.DOAJ_KV.put(ENRICHMENT_KEY, after, { expirationTtl: KV_TTL });
+  return true;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * OAI-PMH — compatibilité de chaque revue
+ *
+ * validator.oaipmh.com n'expose pas d'API publique gratuite (sa « REST API »
+ * est payante, sur demande à l'auteur). La sonde est donc faite ici : un seul
+ * verbe, Identify, sur une poignée d'URL candidates déduites de « Journal URL ».
+ * Un dépôt OAI-PMH valide répond un XML contenant <Identify> et « OAI-PMH ».
+ *
+ * Le balayage tourne sur son propre cron (*\/15) : il a ainsi les ~50
+ * sous-requêtes d'une invocation pour lui seul, sans concurrencer Crossref.
+ * 8 revues par passage, 6 candidates au pire = 48 requêtes. Le corpus complet
+ * (≈ 960 revues) est couvert en une trentaine d'heures, puis recommence.
+ * ────────────────────────────────────────────────────────────────────────── */
+const OAI_KEY        = 'oai_cache';
+const OAI_META_KEY   = 'oai_cache_meta';
+const OAI_CURSOR_KEY = 'oai_cursor';
+const OAI_PER_RUN    = 8;
+const OAI_TIMEOUT_MS = 6000;
+const OAI_MAX_BYTES  = 16384;
+
+/** URL candidates, de la plus probable à la plus spéculative. */
+function oaiCandidates(raw) {
+  const u = String(raw || '').trim().replace(/\/+$/, '');
+  if (!/^https?:\/\//i.test(u)) return [];
+  let root;
+  try { root = new URL(u).origin; } catch { return []; }
+  const out = [u + '/oai'];                                   // OJS : .../index.php/abc/oai
+  const ojs = u.match(/^(.*\/index\.php\/[^/]+)/);            // page profonde d'un OJS
+  if (ojs) out.push(ojs[1] + '/oai');
+  out.push(u + '/oai/request');                               // DSpace / EPrints
+  out.push(root + '/index.php/index/oai');                    // OJS, portail multi-revues
+  out.push(root + '/oai', root + '/oai/request');
+  return [...new Set(out)];
+}
+
+/** Lit au plus `max` octets du corps : une page HTML de 10 Mo ne doit rien coûter. */
+async function readCapped(resp, max) {
+  const reader = resp.body && resp.body.getReader();
+  if (!reader) return '';
+  const dec = new TextDecoder();
+  let out = '', n = 0;
+  try {
+    while (n < max) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      n += value.length;
+      out += dec.decode(value, { stream: true });
+    }
+  } catch { /* flux coupé : on juge sur ce qu'on a */ }
+  try { await reader.cancel(); } catch { /* déjà clos */ }
+  return out;
+}
+
+// Pas de RegExp construite a partir d'une chaine : une classe comme [\s\S]
+// n'y survit pas a l'echappement et se compile en [sS], qui ne matche rien
+// d'utile. Deux indexOf font le meme travail sans ce piege.
+function xmlTag(text, tag) {
+  const open = text.indexOf('<' + tag + '>');
+  if (open === -1) return '';
+  const close = text.indexOf('</' + tag + '>', open);
+  if (close === -1) return '';
+  return text.slice(open + tag.length + 2, close).trim().slice(0, 200);
+}
+
+/** Renvoie la fiche du dépôt si `base` répond un Identify valide, sinon null. */
+async function oaiIdentify(base) {
+  try {
+    const r = await fetch(base + (base.includes('?') ? '&' : '?') + 'verb=Identify', {
+      headers: { 'User-Agent': 'DOAJ-Observatory/1.0 (https://azilan.me)' },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(OAI_TIMEOUT_MS),
+    });
+    if (!r.ok) return null;
+    const body = await readCapped(r, OAI_MAX_BYTES);
+    if (!/<Identify[\s>]/.test(body) || !/OAI-PMH/.test(body)) return null;
+    return {
+      url:         base,
+      name:        xmlTag(body, 'repositoryName'),
+      granularity: xmlTag(body, 'granularity'),
+      earliest:    xmlTag(body, 'earliestDatestamp'),
+    };
+  } catch { return null; }
+}
+
+/**
+ * Une tranche du corpus par passage. Le curseur tourne ; un échec réseau
+ * n'efface jamais un dépôt déjà trouvé (on ne remplace que par du positif,
+ * ou par `false` quand toutes les candidates ont répondu sans erreur fatale).
+ */
+async function sweepOai(env) {
+  const raw = await env.DOAJ_KV.get(CACHE_KEY);
+  if (!raw) throw new Error('African journals KV not found — run /refresh first');
+  const journals = JSON.parse(raw);
+  if (!journals.length) return { journals: 0, refreshed: 0 };
+
+  const prevRaw = await env.DOAJ_KV.get(OAI_KEY);
+  const prev = prevRaw ? JSON.parse(prevRaw) : {};
+  const next = { ...prev };
+
+  const cursorRaw = await env.DOAJ_KV.get(OAI_CURSOR_KEY);
+  const start = Math.max(0, parseInt(cursorRaw, 10) || 0) % journals.length;
+  const slice = journals.slice(start, start + OAI_PER_RUN);
+
+  // Les revues de la tranche en parallèle, leurs candidates en série : le
+  // budget rare est le nombre de sous-requêtes (48 au pire, inchangé), pas le
+  // temps. En série, la tranche pouvait dépasser la durée d'une invocation.
+  await Promise.all(slice.map(async j => {
+    const keys = [normIssnW(j['EISSN'] || ''), normIssnW(j['ISSN'] || '')].filter(Boolean);
+    if (!keys.length) return;
+    let found = null;
+    for (const c of oaiCandidates(j['Journal URL'])) {
+      found = await oaiIdentify(c);
+      if (found) break;
+    }
+    for (const k of keys) next[k] = found || false;
+  }));
+
+  const meta = {
+    generated:     new Date().toISOString(),
+    journals:      journals.length,
+    refreshedFrom: start,
+    refreshed:     slice.length,
+    checked:       Object.keys(next).length,
+    found:         Object.values(next).filter(Boolean).length,
+  };
+
+  if (JSON.stringify(next) !== JSON.stringify(prev)) {
+    await env.DOAJ_KV.put(OAI_KEY, JSON.stringify(next), { expirationTtl: KV_TTL });
+  }
+  await env.DOAJ_KV.put(OAI_META_KEY, JSON.stringify(meta), { expirationTtl: KV_TTL });
+  await env.DOAJ_KV.put(OAI_CURSOR_KEY, String((start + slice.length) % journals.length), { expirationTtl: KV_TTL });
   return meta;
 }
 
@@ -374,6 +663,9 @@ export default {
         if (!incoming || typeof incoming !== "object") {
           return new Response(JSON.stringify({ ok: false }), { status: 400, headers: CORS });
         }
+        if (!Object.keys(incoming).length) {
+          return new Response(JSON.stringify({ ok: true, stored: 0, wrote: false }), { headers: CORS });
+        }
         const clean = {};
         for (const [issn, val] of Object.entries(incoming)) {
           if (!/^\d{4}-[\dXx]{4}$/i.test(issn)) continue;
@@ -389,12 +681,67 @@ export default {
         // Merge: incoming data fills gaps, existing non-null values take priority
         const prevOA = existing.openalex || {};
         const mergedOA = { ...clean, ...Object.fromEntries(Object.entries(prevOA).filter(([,v]) => v)) };
-        await env.DOAJ_KV.put(
-          ENRICHMENT_KEY,
-          JSON.stringify({ ...existing, openalex: mergedOA }),
-          { expirationTtl: KV_TTL }
-        );
-        return new Response(JSON.stringify({ ok: true, stored: Object.keys(clean).length }), { headers: CORS });
+        const wrote = await putEnrichmentIfChanged(env, existing, { ...existing, openalex: mergedOA });
+        return new Response(JSON.stringify({ ok: true, stored: Object.keys(clean).length, wrote }), { headers: CORS });
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false }), { status: 500, headers: CORS });
+      }
+    }
+
+    // /report-oc (POST) — browser reports resolved OpenCitations hits for KV caching.
+    // Without this route the frontend's report call 404s and the OpenCitations
+    // lookups are redone from scratch by every single visitor.
+    if (url.pathname === "/report-oc" && request.method === "POST") {
+      try {
+        const incoming = await request.json();
+        if (!incoming || typeof incoming !== "object") {
+          return new Response(JSON.stringify({ ok: false }), { status: 400, headers: CORS });
+        }
+        if (!Object.keys(incoming).length) {
+          return new Response(JSON.stringify({ ok: true, stored: 0, wrote: false }), { headers: CORS });
+        }
+        const clean = {};
+        for (const [issn, val] of Object.entries(incoming)) {
+          if (!/^\d{4}-[\dXx]{4}$/i.test(issn)) continue;
+          clean[issn] = val === true;
+        }
+        const existingRaw = await env.DOAJ_KV.get(ENRICHMENT_KEY);
+        const existing = existingRaw ? JSON.parse(existingRaw) : {};
+        // Merge: incoming data wins, except that a previously recorded hit (true)
+        // is never downgraded to a miss. Read-modify-write, so two simultaneous
+        // reports can lose one update — harmless, the next visitor reports again.
+        const prevOC = existing.opencitations || {};
+        const mergedOC = { ...prevOC, ...clean };
+        for (const [k, v] of Object.entries(prevOC)) if (v === true) mergedOC[k] = true;
+        const wrote = await putEnrichmentIfChanged(env, existing, { ...existing, opencitations: mergedOC });
+        return new Response(JSON.stringify({ ok: true, stored: Object.keys(clean).length, wrote }), { headers: CORS });
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false }), { status: 500, headers: CORS });
+      }
+    }
+
+    // /report-cr (POST) — browser reports the Crossref counts it resolved.
+    // Le Worker ne peut en interroger qu'une quarantaine par passage (budget de
+    // sous-requêtes) ; les navigateurs, eux, les récupèrent déjà carte par carte.
+    if (url.pathname === "/report-cr" && request.method === "POST") {
+      try {
+        const incoming = await request.json();
+        if (!incoming || typeof incoming !== "object") {
+          return new Response(JSON.stringify({ ok: false }), { status: 400, headers: CORS });
+        }
+        const clean = {};
+        for (const [issn, val] of Object.entries(incoming)) {
+          if (!/^\d{4}-[\dXx]{4}$/i.test(issn)) continue;
+          if (typeof val === "number" && Number.isFinite(val) && val >= 0) clean[issn] = Math.trunc(val);
+        }
+        if (!Object.keys(clean).length) {
+          return new Response(JSON.stringify({ ok: true, stored: 0 }), { headers: CORS });
+        }
+        const existingRaw = await env.DOAJ_KV.get(ENRICHMENT_KEY);
+        const existing = existingRaw ? JSON.parse(existingRaw) : {};
+        const merged = { ...(existing.crossref || {}), ...clean };
+        const wrote = await putEnrichmentIfChanged(env, existing, { ...existing, crossref: merged });
+        return new Response(JSON.stringify({ ok: true, stored: Object.keys(clean).length, wrote }), { headers: CORS });
       } catch (e) {
         return new Response(JSON.stringify({ ok: false }), { status: 500, headers: CORS });
       }
@@ -473,6 +820,26 @@ export default {
       });
     }
 
+    // /oai-sweep — une tranche du balayage OAI-PMH, a la demande.
+    // Meme secret que /refresh. Utile pour verifier le balayage sans attendre
+    // le cron, et pour rattraper le corpus plus vite qu'un passage par quart
+    // d'heure (chaque appel avance le curseur de OAI_PER_RUN revues).
+    if (url.pathname === "/oai-sweep") {
+      if (!env.REFRESH_SECRET || url.searchParams.get("secret") !== env.REFRESH_SECRET) {
+        return new Response("Unauthorized", { status: 401 });
+      }
+      try {
+        const meta = await sweepOai(env);
+        return new Response(JSON.stringify({ ok: true, ...meta }), {
+          headers: { ...CORS, "Content-Type": "application/json" }
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), {
+          status: 500, headers: { ...CORS, "Content-Type": "application/json" }
+        });
+      }
+    }
+
     // /enrichment — pre-computed Crossref + OpenAlex counts (loaded once per visitor at startup)
     if (url.pathname === "/enrichment") {
       const cached  = await env.DOAJ_KV.get(ENRICHMENT_KEY);
@@ -483,11 +850,27 @@ export default {
         });
       }
       const meta = metaRaw ? JSON.parse(metaRaw) : {};
-      return new Response(cached, {
+
+      // Le balayage OAI-PMH vit dans sa propre clé KV (son cron écrit toutes les
+      // 15 min : le mêler à enrichment_cache écraserait les retours /report-*).
+      // On ne le recolle qu'à la lecture, dans une réponse déjà cachée 1 h.
+      let payload = cached;
+      const oaiRaw = await env.DOAJ_KV.get(OAI_KEY);
+      if (oaiRaw) {
+        try { payload = JSON.stringify({ ...JSON.parse(cached), oai: JSON.parse(oaiRaw) }); }
+        catch { /* cache illisible : on sert l'enrichissement seul */ }
+      }
+
+      return new Response(payload, {
         headers: {
           ...CORS,
           "Content-Type":  "application/json; charset=utf-8",
-          "Cache-Control": "public, max-age=86400",
+          // Le cache d'enrichissement est complété en continu par les navigateurs
+          // (/report-oa, /report-oc, /report-cr) et par le cron hebdomadaire.
+          // 24 h de cache ferme signifiait qu'une reconstruction restait invisible
+          // une journée entière. stale-while-revalidate garde l'affichage instantané
+          // (servi depuis le cache) tout en rafraîchissant en arrière-plan.
+          "Cache-Control": "public, max-age=3600, stale-while-revalidate=82800",
           "X-Generated":   meta.generated || "",
         }
       });
@@ -562,8 +945,19 @@ export default {
     return new Response("Not found", { status: 404 });
   },
 
-  // ── Cron handler (1st of every month at 00:00 UTC) ──────────────────────────
-  async scheduled(_event, env, ctx) {
+  // ── Cron handler (weekly — schedule declared in wrangler.toml) ──────────────
+  async scheduled(event, env, ctx) {
+    // Deux horaires, deux budgets de sous-requêtes distincts. Le balayage
+    // OAI-PMH consomme jusqu'à 48 requêtes : il ne peut pas partager
+    // l'invocation du dimanche, qui télécharge déjà deux fois le CSV du DOAJ.
+    if (event && event.cron && event.cron !== "0 3 * * SUN") {
+      ctx.waitUntil(
+        sweepOai(env)
+          .then(m => console.log(`OAI sweep: ${m.refreshed} journals from ${m.refreshedFrom}, ${m.found} repositories known`))
+          .catch(e => console.error("OAI sweep failed:", e.message))
+      );
+      return;
+    }
     ctx.waitUntil(
       // Step 1: refresh journal list, then Step 2: build enrichment from it
       Promise.all([

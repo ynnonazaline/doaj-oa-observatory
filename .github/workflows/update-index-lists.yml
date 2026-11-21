@@ -1,0 +1,55 @@
+name: Mise a jour des listes d'indexation (WoS + Scopus)
+
+# Regenere wos_issns.json et scopus_issns.json a partir de
+# github.com/wosaide/wosaide-journal-lists, croises avec le corpus DOAJ
+# africain servi par le Worker. Les deux fichiers sont lus par index.html
+# (window.WOS_MAP / window.SCOPUS_MAP) pour les filtres d'indexation.
+#
+# Le dossier SCOPUS du depot source ne contient qu'un export, mais il est DATE
+# (ext_list_Jul_2026.csv). Le script interroge l'API GitHub et prend le plus
+# recent : c'est ce qui rend la mise a jour reellement automatique.
+
+on:
+  schedule:
+    - cron: "0 4 * * 1"   # chaque lundi a 04:00 UTC
+  workflow_dispatch:
+
+jobs:
+  listes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verifications internes du script
+        run: python update_index_lists.py --self-check
+
+      - name: Regenerer les deux listes
+        run: python update_index_lists.py        # stdlib uniquement
+
+      - name: Refuser une liste vide
+        # Un export source renomme ou une panne du Worker produirait un JSON
+        # vide : le filtre deviendrait inoperant sur le site. Mieux vaut que le
+        # workflow echoue bruyamment que de publier une liste creuse.
+        run: |
+          python - <<'PY'
+          import json, sys
+          for path, key in (("wos_issns.json", "wos_total"), ("scopus_issns.json", "scopus_total")):
+              d = json.load(open(path, encoding="utf-8"))
+              if not d.get("issns") or not d.get(key):
+                  sys.exit("%s est vide (%s=%s, %d ISSN)" % (path, key, d.get(key), len(d.get("issns") or {})))
+              print("%s : %d ISSN, %d revues du corpus" % (path, len(d["issns"]), d["matched"]))
+          PY
+
+      - name: Commit si changement
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add wos_issns.json scopus_issns.json
+          git diff --cached --quiet || git commit -m "chore(data): refresh wos_issns.json + scopus_issns.json"
+          git push

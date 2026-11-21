@@ -14,8 +14,17 @@ binding    = "DOAJ_KV"
 id         = "e5d9b1495a6a431b8dd40f58789bc4e4"
 preview_id = "b911aabc9f76452ead2f1338608949f6"
 
-# Cron: set via Cloudflare dashboard (Workers > doaj-african-cache > Settings > Triggers)
-# Schedule: 0 0 * * 0  (every Sunday at midnight UTC)
+# Cron — déclaré ici (et non plus seulement dans le dashboard) pour qu'un
+# redéploiement ne puisse pas le perdre. Les entrées KV expirent après 35 jours
+# (KV_TTL dans worker.js) : le passage doit donc rester au moins mensuel.
+# Après déploiement, vérifier dans Workers > doaj-african-cache > Settings > Triggers.
+[triggers]
+# NB : Cloudflare refuse « 0 » pour le jour de la semaine (1-7 ou MON-SUN).
+# C'est l'erreur de l'ancienne consigne « 0 0 * * 0 », jamais acceptée par l'API.
+crons = ["0 3 * * SUN", "*/15 * * * *"]
+# "0 3 * * SUN"  : corpus DOAJ + tranche Crossref
+# "*/15 * * * *" : tranche du balayage OAI-PMH (8 revues par passage,
+#                  corpus complet en ~30 h, puis boucle).
 
 # Secret for /refresh endpoint — set with:
 #   wrangler secret put REFRESH_SECRET
